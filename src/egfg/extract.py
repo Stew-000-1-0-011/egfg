@@ -118,22 +118,31 @@ def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) ->
         for i, n in enumerate(g.classes[cid]):
             for ch in n.children:
                 prob += x[(cid, i)] <= a[ch]
-    # Warm start from the (acyclic) tree extraction.
-    warm = extract_tree(g, fg).dag.nodes
-    for (cid, i), var in x.items():
-        var.setInitialValue(1 if warm.get(cid) == g.classes[cid][i] and cid in warm else 0)
-    for cid, var in a.items():
-        var.setInitialValue(1 if cid in warm else 0)
+    # The tree extraction is acyclic and always valid: it is the warm start for
+    # every solve and the fallback whenever the solver runs out of time.
+    fallback = extract_tree(g, fg)
+    warm = fallback.dag.nodes
+
+    def set_warm_start() -> None:
+        for (cid, i), var in x.items():
+            var.setInitialValue(1 if cid in warm and warm[cid] == g.classes[cid][i] else 0)
+        for cid, var in a.items():
+            var.setInitialValue(1 if cid in warm else 0)
+
+    def give_up() -> Extraction:
+        return Extraction(fallback.dag, fallback.cost, False, time.perf_counter() - start)
+
     # Acyclicity by lazy cuts: solve, and while the chosen nodes form a cycle,
     # forbid choosing that whole cycle again (instead of big-M ordering variables).
     optimal = True
     while True:
         remaining = time_limit_s - (time.perf_counter() - start)
         if remaining <= 0:
-            raise RuntimeError("ILP extraction ran out of time while cutting cycles")
+            return give_up()
+        set_warm_start()
         stats = prob.solve(pulp.HiGHS(msg=False, timeLimit=remaining, warmStart=True))
         if not stats.has_solution:
-            raise RuntimeError(f"ILP extraction failed: {stats.status}")
+            return give_up()
         optimal = optimal and stats.status == pulp.LpSolveStatus.Optimal
         picked = {
             cid: i
@@ -146,7 +155,8 @@ def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) ->
             break
         prob += pulp.lpSum(x[(cid, picked[cid])] for cid in cycle) <= len(cycle) - 1
     choice = {cid: g.classes[cid][i] for cid, i in picked.items()}
-    return _build(g, fg, choice, optimal, start)
+    result = _build(g, fg, choice, optimal, start)
+    return result if result.cost <= fallback.cost else give_up()
 
 
 def _find_cycle(g: EGraphData, picked: dict[str, int]) -> list[str] | None:

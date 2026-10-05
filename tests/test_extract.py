@@ -32,3 +32,14 @@ def test_extracted_dag_is_correct():
         tables, _ = evaluate(ex.dag, fg, SUM_PRODUCT)
         for v, t in tables.items():
             assert np.allclose(t.data / t.data.sum(), brute_force_marginals(fg)[v])
+
+
+def test_ilp_time_out_falls_back_to_valid_result():
+    fg = random_tree(6, 2, seed=0)
+    g = saturate(fg, all_marginal_queries(fg)).graph
+    ex = extract_dag_ilp(g, fg, time_limit_s=0.0)
+    assert ex.optimal is False
+    assert ex.cost <= extract_tree(g, fg).cost
+    tables, _ = evaluate(ex.dag, fg, SUM_PRODUCT)
+    for v, t in tables.items():
+        assert np.allclose(t.data / t.data.sum(), brute_force_marginals(fg)[v])
