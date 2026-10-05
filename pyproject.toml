@@ -1,0 +1,25 @@
+[project]
+name = "egfg"
+version = "0.1.0"
+description = "E-graph optimization of factor graph inference"
+readme = "README.md"
+authors = [
+    { name = "Shunsuke Tamaki", email = "shnsk0204@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "egglog>=14,<15",
+    "highspy>=1.15.1",
+    "numpy>=2.0",
+    "opt-einsum>=3.4.0",
+    "pulp>=4.0.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
