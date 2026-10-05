@@ -180,3 +180,57 @@ def opt_einsum_cost(fg: FactorGraph) -> int:
         _, info = opt_einsum.contract_path(f"{inputs}->{letters[v]}", *shapes, shapes=True, optimize=strategy)
         total += int(info.opt_cost)
     return total
+
+
+def factor_graph_bp_dag(fg: FactorGraph) -> tuple[Dag, list[MessageSig]]:
+    """Sum-product BP on an acyclic factor graph, written as shared terms.
+
+    m(f→x) = Σ_{scope(f)∖x} f · Π_{y∈scope(f)∖x} μ(y→f),  μ(y→f) = Π_{g∋y, g≠f} m(g→y),
+    p(x) ∝ Π_{f∋x} m(f→x). Products follow factor id / variable name order.
+    Returns the Dag and the (factor ids, scope) signature of every m(f→x).
+    """
+    nvars = len(fg.cards)
+    parent = list(range(nvars + len(fg.factors)))
+    vidx = {v: i for i, v in enumerate(fg.variables())}
+
+    def find(u: int) -> int:
+        while parent[u] != u:
+            parent[u] = parent[parent[u]]
+            u = parent[u]
+        return u
+
+    for k, f in enumerate(fg.factors):
+        for v in f.scope:
+            ru, rv = find(nvars + k), find(vidx[v])
+            if ru == rv:
+                raise ValueError("factor graph has a loop; BP would not be exact")
+            parent[ru] = rv
+
+    factors_of = {v: sorted(f.id for f in fg.factors if v in f.scope) for v in fg.variables()}
+    m_memo: dict[tuple[int, str], tuple[Term, frozenset[int]]] = {}
+
+    def mu(y: str, fid: int) -> tuple[Term | None, frozenset[int]]:
+        parts, fids = [], frozenset()
+        for g in factors_of[y]:
+            if g != fid:
+                t, fg_ids = m(g, y)
+                parts.append(t)
+                fids |= fg_ids
+        return (_product(parts) if parts else None), fids
+
+    def m(fid: int, x: str) -> tuple[Term, frozenset[int]]:
+        if (fid, x) not in m_memo:
+            scope = fg.factor(fid).scope
+            parts: list[Term] = [Leaf(fid)]
+            fids = frozenset({fid})
+            for y in sorted(set(scope) - {x}):
+                t, ids = mu(y, fid)
+                if t is not None:
+                    parts.append(t)
+                    fids |= ids
+            m_memo[(fid, x)] = (_sum_out(set(scope) - {x}, _product(parts)), fids)
+        return m_memo[(fid, x)]
+
+    terms = {v: _product([m(fid, v)[0] for fid in factors_of[v]]) for v in fg.variables()}
+    sigs = [(ids, frozenset({x})) for (fid, x), (_, ids) in m_memo.items()]
+    return to_dag(terms), sigs
