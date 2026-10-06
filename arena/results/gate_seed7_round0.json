@@ -1,0 +1,119 @@
+{
+ "seed": 7,
+ "geomean_ratio": 0.5415594725199739,
+ "all_correct": true,
+ "problems": {
+  "holdout_chain19_k8": {
+   "flops": 5016,
+   "best_jtp": 7744,
+   "ratio": 0.6477272727272727,
+   "correct": true,
+   "compile_s": 9.313
+  },
+  "holdout_chain16_k8": {
+   "flops": 4176,
+   "best_jtp": 6400,
+   "ratio": 0.6525,
+   "correct": true,
+   "compile_s": 5.772
+  },
+  "holdout_star10_k6": {
+   "flops": 1176,
+   "best_jtp": 2052,
+   "ratio": 0.5730994152046783,
+   "correct": true,
+   "compile_s": 1.91
+  },
+  "holdout_star12_k3": {
+   "flops": 429,
+   "best_jtp": 669,
+   "ratio": 0.6412556053811659,
+   "correct": true,
+   "compile_s": 3.025
+  },
+  "holdout_tree8_k3": {
+   "flops": 246,
+   "best_jtp": 306,
+   "ratio": 0.803921568627451,
+   "correct": true,
+   "compile_s": 1.128
+  },
+  "holdout_tree10_k4": {
+   "flops": 552,
+   "best_jtp": 752,
+   "ratio": 0.7340425531914894,
+   "correct": true,
+   "compile_s": 2.843
+  },
+  "holdout_cycle12_k6": {
+   "flops": 10044,
+   "best_jtp": 11232,
+   "ratio": 0.8942307692307693,
+   "correct": true,
+   "compile_s": 2.447
+  },
+  "holdout_cycle13_k4": {
+   "flops": 3488,
+   "best_jtp": 3792,
+   "ratio": 0.919831223628692,
+   "correct": true,
+   "compile_s": 2.68
+  },
+  "holdout_grid2x6_k2": {
+   "flops": 432,
+   "best_jtp": 512,
+   "ratio": 0.84375,
+   "correct": true,
+   "compile_s": 3.666
+  },
+  "holdout_grid3x5_k2": {
+   "flops": 972,
+   "best_jtp": 1060,
+   "ratio": 0.9169811320754717,
+   "correct": true,
+   "compile_s": 5.029
+  },
+  "holdout_sparse15_k2": {
+   "flops": 446,
+   "best_jtp": 532,
+   "ratio": 0.8383458646616542,
+   "correct": true,
+   "compile_s": 5.661
+  },
+  "holdout_sparse14_k3": {
+   "flops": 1179,
+   "best_jtp": 1377,
+   "ratio": 0.8562091503267973,
+   "correct": true,
+   "compile_s": 9.071
+  },
+  "holdout_lowrank_cycle10_k8_r1": {
+   "flops": 448,
+   "best_jtp": 20608,
+   "ratio": 0.021739130434782608,
+   "correct": true,
+   "compile_s": 5.393
+  },
+  "holdout_lowrank_chain8_k12_r1": {
+   "flops": 474,
+   "best_jtp": 5184,
+   "ratio": 0.09143518518518519,
+   "correct": true,
+   "compile_s": 4.22
+  },
+  "holdout_ternary10_k2": {
+   "flops": 296,
+   "best_jtp": 360,
+   "ratio": 0.8222222222222222,
+   "correct": true,
+   "compile_s": 2.353
+  },
+  "holdout_ternary10_k3": {
+   "flops": 936,
+   "best_jtp": 1170,
+   "ratio": 0.8,
+   "correct": true,
+   "compile_s": 2.399
+  }
+ }
+}
