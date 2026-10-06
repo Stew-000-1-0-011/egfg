@@ -50,13 +50,13 @@ class OptimizeResult:
         return sum(e.seconds for e in self.local_extractions)
 
 
-def _extract(g, fg: FactorGraph, extractor: str, time_limit_s: float) -> Extraction:
+def _extract(g, fg: FactorGraph, extractor: str, time_limit_s: float, weights=None) -> Extraction:
     if extractor == "ilp":
-        return extract_dag_ilp(g, fg, time_limit_s=time_limit_s)
+        return extract_dag_ilp(g, fg, time_limit_s=time_limit_s, weights=weights)
     if extractor == "greedy":
-        return extract_dag_greedy(g, fg, time_limit_s=time_limit_s)
+        return extract_dag_greedy(g, fg, time_limit_s=time_limit_s, weights=weights)
     if extractor == "tree":
-        return extract_tree(g, fg)
+        return extract_tree(g, fg, weights=weights)
     raise ValueError(f"unknown extractor {extractor!r}")
 
 

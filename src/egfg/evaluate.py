@@ -104,25 +104,31 @@ def value_feature(fg: FactorGraph, var: str, values: np.ndarray) -> dict[int, np
 
 
 def evaluate(
-    dag: Dag, fg: FactorGraph, semiring, inputs: dict[str, Table] | None = None
+    dag: Dag,
+    fg: FactorGraph,
+    semiring,
+    inputs: dict[str, Table] | None = None,
+    known: dict[str, Table] | None = None,
 ) -> tuple[dict[str, Table], int]:
     """Evaluate each reachable node once (memoized); return root tables and the FLOP count.
 
     Input leaves take their value from `inputs` (already in the semiring's form);
-    an input leaf without a value is an error.
+    an input leaf without a value is an error. Nodes in `known` (node id -> table)
+    are taken as already computed and not counted in the FLOP count.
     """
     inputs = inputs or {}
+    known = known or {}
     scopes = dag_scopes(dag, fg)
     order = reachable(dag)
     unresolved = sorted(
-        {dag.nodes[nid].arg for nid in order if dag.nodes[nid].op == "input"} - set(inputs)
+        {dag.nodes[nid].arg for nid in order if dag.nodes[nid].op == "input" and nid not in known} - set(inputs)
     )
     if unresolved:
         raise ValueError(f"Dag still contains input leaves: {unresolved}")
-    done: dict[str, Table] = {}
+    done: dict[str, Table] = {nid: known[nid] for nid in order if nid in known}
     flops = 0
     # children before parents: process in reverse DFS-discovery order with an explicit check
-    pending = list(reversed(order))
+    pending = [nid for nid in reversed(order) if nid not in done]
     while pending:
         progressed = []
         for nid in pending:

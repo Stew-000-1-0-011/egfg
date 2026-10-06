@@ -49,3 +49,38 @@ def dag_cost(dag: Dag, fg: FactorGraph) -> int:
 def max_intermediate_size(dag: Dag, fg: FactorGraph) -> int:
     scopes = dag_scopes(dag, fg)
     return max(fg.size(scopes[nid]) for nid in reachable(dag))
+
+
+def depends_on(dag: Dag, after: set[int] | frozenset[int]) -> dict[str, bool]:
+    """For each reachable node: is one of the factors `after` below it?"""
+    dep: dict[str, bool] = {}
+    for root in reachable(dag):
+        stack = [root]
+        while stack:
+            cur = stack[-1]
+            if cur in dep:
+                stack.pop()
+                continue
+            node = dag.nodes[cur]
+            todo = [c for c in node.children if c not in dep]
+            if todo:
+                stack.extend(todo)
+                continue
+            dep[cur] = (node.op == "leaf" and node.arg in after) or any(dep[c] for c in node.children)
+            stack.pop()
+    return dep
+
+
+def split_cost(dag: Dag, fg: FactorGraph, after: set[int] | frozenset[int]) -> tuple[int, int]:
+    """(cost of the nodes not depending on the factors `after`, cost of those that do)."""
+    scopes = dag_scopes(dag, fg)
+    dep = depends_on(dag, after)
+    before = later = 0
+    for nid in reachable(dag):
+        node = dag.nodes[nid]
+        c = node_cost(node, scopes[nid], [scopes[x] for x in node.children], fg)
+        if dep[nid]:
+            later += c
+        else:
+            before += c
+    return before, later

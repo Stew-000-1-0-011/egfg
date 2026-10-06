@@ -7,9 +7,9 @@ from dataclasses import dataclass
 
 import pulp
 
-from .cost import dag_cost, node_cost
+from .cost import dag_cost, node_cost, reachable
 from .egraph import EGraphData
-from .ir import Dag, ENode
+from .ir import Dag, ENode, dag_scopes
 from .model import FactorGraph
 
 
@@ -19,6 +19,10 @@ class Extraction:
     cost: int
     optimal: bool | None
     seconds: float
+    weighted_cost: int | None = None  # the objective when e-class weights were given
+
+
+Weights = dict[str, int]  # e-class -> factor applied to the cost of its node (default 1)
 
 
 def class_scopes(g: EGraphData, fg: FactorGraph) -> dict[str, frozenset[str]]:
@@ -45,9 +49,29 @@ def class_scopes(g: EGraphData, fg: FactorGraph) -> dict[str, frozenset[str]]:
     return scopes
 
 
-def _costs(g: EGraphData, fg: FactorGraph, scopes) -> dict[tuple[str, int], int]:
+def class_leaves(g: EGraphData) -> dict[str, frozenset[int]]:
+    """Factor ids below each e-class. The rewrite rules never change a term's set of
+    factors, so every node of an e-class gives the same set; the first one found is used."""
+    leaves: dict[str, frozenset[int]] = {}
+    changed = True
+    while changed:
+        changed = False
+        for cid, nodes in g.classes.items():
+            if cid in leaves:
+                continue
+            for n in nodes:
+                if all(c in leaves for c in n.children):
+                    own = frozenset({n.arg}) if n.op == "leaf" else frozenset()
+                    leaves[cid] = own.union(*(leaves[c] for c in n.children))
+                    changed = True
+                    break
+    return leaves
+
+
+def _costs(g: EGraphData, fg: FactorGraph, scopes, weights: Weights | None = None) -> dict[tuple[str, int], int]:
+    w = weights or {}
     return {
-        (cid, i): node_cost(n, scopes[cid], [scopes[c] for c in n.children], fg)
+        (cid, i): w.get(cid, 1) * node_cost(n, scopes[cid], [scopes[c] for c in n.children], fg)
         for cid, nodes in g.classes.items()
         for i, n in enumerate(nodes)
     }
@@ -66,7 +90,19 @@ def _reachable_classes(g: EGraphData) -> list[str]:
     return sorted(seen)
 
 
-def _build(g: EGraphData, fg: FactorGraph, choice: dict[str, ENode], optimal, start) -> Extraction:
+def weighted_dag_cost(dag: Dag, fg: FactorGraph, weights: Weights) -> int:
+    """DAG cost with each node's cost multiplied by its weight (nodes are keyed by e-class)."""
+    scopes = dag_scopes(dag, fg)
+    total = 0
+    for nid in reachable(dag):
+        n = dag.nodes[nid]
+        total += weights.get(nid, 1) * node_cost(n, scopes[nid], [scopes[c] for c in n.children], fg)
+    return total
+
+
+def _build(
+    g: EGraphData, fg: FactorGraph, choice: dict[str, ENode], optimal, start, weights: Weights | None = None
+) -> Extraction:
     nodes: dict[str, ENode] = {}
     stack = list(g.roots.values())
     while stack:
@@ -76,7 +112,9 @@ def _build(g: EGraphData, fg: FactorGraph, choice: dict[str, ENode], optimal, st
         nodes[cid] = choice[cid]
         stack.extend(choice[cid].children)
     dag = Dag(nodes, dict(g.roots), dict(g.inputs))
-    return Extraction(dag, dag_cost(dag, fg), optimal, time.perf_counter() - start)
+    cost = dag_cost(dag, fg)
+    wcost = cost if weights is None else weighted_dag_cost(dag, fg, weights)
+    return Extraction(dag, cost, optimal, time.perf_counter() - start, wcost)
 
 
 def _tree_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, ENode]:
@@ -96,10 +134,10 @@ def _tree_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, 
     return {cid: n for cid, (_, n) in best.items()}
 
 
-def extract_tree(g: EGraphData, fg: FactorGraph) -> Extraction:
+def extract_tree(g: EGraphData, fg: FactorGraph, weights: Weights | None = None) -> Extraction:
     start = time.perf_counter()
-    costs = _costs(g, fg, class_scopes(g, fg))
-    return _build(g, fg, _tree_choice(g, costs), None, start)
+    costs = _costs(g, fg, class_scopes(g, fg), weights)
+    return _build(g, fg, _tree_choice(g, costs), None, start, weights)
 
 
 def _start_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, ENode]:
@@ -145,7 +183,9 @@ def _reach_cost(roots, choice: dict[str, ENode], ncost: dict[tuple[str, ENode], 
     return total
 
 
-def extract_dag_greedy(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) -> Extraction:
+def extract_dag_greedy(
+    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None
+) -> Extraction:
     """Local search on the shared (DAG) cost, starting from the tree (or seed) choice.
 
     Repeatedly try every other node of every e-class reachable from the roots;
@@ -153,7 +193,7 @@ def extract_dag_greedy(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60)
     finds no improvement or time runs out.
     """
     start = time.perf_counter()
-    costs = _costs(g, fg, class_scopes(g, fg))
+    costs = _costs(g, fg, class_scopes(g, fg), weights)
     ncost = _node_costs(g, costs)
     choice = _start_choice(g, costs)
     roots = list(dict.fromkeys(g.roots.values()))
@@ -175,7 +215,7 @@ def extract_dag_greedy(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60)
                 if c is not None and c < current:
                     current, keep, improved = c, n, True
                 choice[cid] = keep
-    return _build(g, fg, choice, None, start)
+    return _build(g, fg, choice, None, start, weights)
 
 
 def _reachable_under(roots, choice: dict[str, ENode]) -> list[str]:
@@ -192,11 +232,13 @@ def _reachable_under(roots, choice: dict[str, ENode]) -> list[str]:
     return order
 
 
-def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) -> Extraction:
+def extract_dag_ilp(
+    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None
+) -> Extraction:
     """Choose one node per needed e-class minimizing the shared (DAG) cost."""
     start = time.perf_counter()
     scopes = class_scopes(g, fg)
-    costs = _costs(g, fg, scopes)
+    costs = _costs(g, fg, scopes, weights)
     cids = _reachable_classes(g)
     prob = pulp.LpProblem("dag_extraction", pulp.LpMinimize)
     x = {
@@ -216,7 +258,7 @@ def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) ->
     # The start choice (tree extraction, or the seed when cheaper) is acyclic and
     # always valid: it is the warm start for every solve and the fallback
     # whenever the solver runs out of time.
-    fallback = _build(g, fg, _start_choice(g, costs), None, start)
+    fallback = _build(g, fg, _start_choice(g, costs), None, start, weights)
     warm = fallback.dag.nodes
 
     def set_warm_start() -> None:
@@ -226,7 +268,7 @@ def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) ->
             var.setInitialValue(1 if cid in warm else 0)
 
     def give_up() -> Extraction:
-        return Extraction(fallback.dag, fallback.cost, False, time.perf_counter() - start)
+        return Extraction(fallback.dag, fallback.cost, False, time.perf_counter() - start, fallback.weighted_cost)
 
     # Acyclicity by lazy cuts: solve, and while the chosen nodes form a cycle,
     # forbid choosing that whole cycle again (instead of big-M ordering variables).
@@ -251,8 +293,8 @@ def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) ->
             break
         prob += pulp.lpSum(x[(cid, picked[cid])] for cid in cycle) <= len(cycle) - 1
     choice = {cid: g.classes[cid][i] for cid, i in picked.items()}
-    result = _build(g, fg, choice, optimal, start)
-    return result if result.cost <= fallback.cost else give_up()
+    result = _build(g, fg, choice, optimal, start, weights)
+    return result if result.weighted_cost <= fallback.weighted_cost else give_up()
 
 
 def _find_cycle(g: EGraphData, picked: dict[str, int]) -> list[str] | None:

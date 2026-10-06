@@ -14,10 +14,10 @@ from typing import Callable
 
 import numpy as np
 
-from .cost import dag_cost
+from .cost import dag_cost, depends_on, split_cost
 from .egraph import SaturationResult, saturate
 from .evaluate import MAX_PRODUCT, SUM_PRODUCT, ExpectationSemiring, Table, evaluate, value_feature
-from .extract import Extraction
+from .extract import Extraction, class_leaves
 from .ir import Dag, ENode, Input, Leaf, Mul, Sum, Term, to_dag
 from .jtree import Piece, TreeTerms, junction_tree, product, sum_out
 from .model import Factor, FactorGraph
@@ -120,6 +120,7 @@ class LocalStep:
     inputs: dict[str, frozenset[str]]
     queries: dict[str, Term]  # MSG and one marginal per state name
     seeds: dict[str, Term]
+    obs_ids: frozenset[int]  # local ids of this step's observation factors
 
 
 def _local_fg(model: DynamicModel, kind: str, obs_tables=None) -> FactorGraph:
@@ -182,7 +183,8 @@ def local_step(model: DynamicModel, kind: str) -> LocalStep:
         seeds[n] = calc.marginal(at(n, 0))[0]
     if inputs:
         seeds = {q: _substitute(t, fwd_id, Input(FWD)) for q, t in seeds.items()}
-    return LocalStep(kind, fg, inputs, queries, seeds)
+    nfirst = len(model.initial) if kind == "head" else len(model.transition)
+    return LocalStep(kind, fg, inputs, queries, seeds, frozenset(range(nfirst, len(fg.factors))))
 
 
 @dataclass
@@ -192,6 +194,13 @@ class Template:
     cost: int
     saturation: SaturationResult | None = None
     extraction: Extraction | None = None
+    prep_cost: int = 0  # nodes not depending on this step's observations (computable in advance)
+    latency_cost: int = 0  # nodes that must wait for the observations
+
+    def __post_init__(self):
+        self.prep_cost, self.latency_cost = split_cost(self.dag, self.local.fg, self.local.obs_ids)
+        dep = depends_on(self.dag, self.local.obs_ids)
+        self.prep_nodes = [nid for nid, d in dep.items() if not d]
 
 
 @dataclass
@@ -213,11 +222,18 @@ def compile_filter(
     max_iters: int = 30,
     node_limit: int = 50_000,
     time_limit_s: float = 60,
+    objective: str = "total",
 ) -> FilterProgram:
-    """Search the head and step templates once each."""
+    """Search the head and step templates once each.
+
+    `objective`: "total" minimizes the step cost; "latency" minimizes the cost of
+    the nodes that wait for the observations, then the total; "weighted:L" counts
+    those nodes L times.
+    """
     from .pipeline import _extract
 
     start = time.perf_counter()
+    fwd = forward_program(model) if objective != "total" else None
     temps = []
     for kind in ("head", "step"):
         loc = local_step(model, kind)
@@ -230,9 +246,23 @@ def compile_filter(
             inputs=loc.inputs,
             seeds=loc.seeds if seed else None,
         )
-        ex = _extract(sat.graph, loc.fg, extractor, time_limit_s)
+        weights = None
+        if objective != "total":
+            w_after = _latency_weight(objective, (fwd.head if kind == "head" else fwd.step).cost)
+            leaves = class_leaves(sat.graph)
+            weights = {cid: w_after if leaves[cid] & loc.obs_ids else 1 for cid in leaves}
+        ex = _extract(sat.graph, loc.fg, extractor, time_limit_s, weights)
         temps.append(Template(loc, ex.dag, ex.cost, sat, ex))
     return FilterProgram(model, temps[0], temps[1], time.perf_counter() - start)
+
+
+def _latency_weight(objective: str, forward_cost: int) -> int:
+    if objective == "latency":
+        # larger than any preparation cost worth paying: latency first, total second
+        return forward_cost + 1
+    if objective.startswith("weighted:"):
+        return int(objective.split(":", 1)[1])
+    raise ValueError(f"unknown objective {objective!r}")
 
 
 def forward_program(model: DynamicModel) -> FilterProgram:
@@ -294,17 +324,40 @@ class Filter:
         self.semiring = semiring
         self.t = 0
         self._msg: Table | None = None
+        self._known: dict[str, Table] | None = None
+        self._sr = None
 
-    def step(self, obs_tables, semiring_for: Callable[[FactorGraph], object] | None = None) -> dict[str, Table]:
-        """Advance one step; return each state's (unnormalized) table at the new time."""
-        tmpl = self.program.head if self.t == 0 else self.program.step
-        fg = _local_fg(self.program.model, tmpl.local.kind, obs_tables)
-        sr = semiring_for(fg) if semiring_for else self.semiring
+    def _template(self) -> Template:
+        return self.program.head if self.t == 0 else self.program.step
+
+    def prepare(self, semiring=None, fg: FactorGraph | None = None) -> None:
+        """Before the next observations arrive: compute everything that does not depend on them."""
+        tmpl = self._template()
+        if fg is None:  # placeholder observation tables: no prepared node reads them
+            fg = _local_fg(self.program.model, tmpl.local.kind)
+        self._sr = semiring or self.semiring
         inputs = {FWD: self._msg} if tmpl.local.inputs else {}
-        tables, _ = evaluate(tmpl.dag, fg, sr, inputs)
+        sub = Dag(tmpl.dag.nodes, {nid: nid for nid in tmpl.prep_nodes}, tmpl.dag.inputs)
+        self._known, _ = evaluate(sub, fg, self._sr, inputs)
+
+    def update(self, obs_tables, fg: FactorGraph | None = None) -> dict[str, Table]:
+        """The observations arrived: finish the step; return each state's (unnormalized) table."""
+        if self._known is None:
+            self.prepare()
+        tmpl = self._template()
+        fg = fg or _local_fg(self.program.model, tmpl.local.kind, obs_tables)
+        inputs = {FWD: self._msg} if tmpl.local.inputs else {}
+        tables, _ = evaluate(tmpl.dag, fg, self._sr, inputs, known=self._known)
         self._msg = _shift_back(_normalize(tables[MSG]))
+        self._known = None
         self.t += 1
         return {n: tables[n] for n in self.program.model.states}
+
+    def step(self, obs_tables, semiring_for: Callable[[FactorGraph], object] | None = None) -> dict[str, Table]:
+        """prepare() then update(): advance one step."""
+        fg = _local_fg(self.program.model, self._template().local.kind, obs_tables)
+        self.prepare(semiring_for(fg) if semiring_for else None, fg)
+        return self.update(obs_tables, fg)
 
 
 def _scalar(t: Table) -> np.ndarray:
