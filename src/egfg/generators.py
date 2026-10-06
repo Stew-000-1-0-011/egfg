@@ -71,3 +71,15 @@ def random_small(seed: int) -> FactorGraph:
         for fid, s in enumerate(scopes)
     ]
     return FactorGraph(cards, factors)
+
+
+def random_sparse(n: int, K: int, seed: int = 0) -> FactorGraph:
+    """A random tree plus n // 4 extra random edges (no self loops, no duplicates)."""
+    rng = np.random.default_rng(seed + 20_000)
+    edges = [(int(rng.integers(0, i)), i) for i in range(1, n)]
+    present = {frozenset(e) for e in edges}
+    extra = n // 4
+    candidates = [(i, j) for i in range(n) for j in range(i + 1, n) if frozenset((i, j)) not in present]
+    for k in rng.permutation(len(candidates))[: min(extra, len(candidates))]:
+        edges.append(candidates[int(k)])
+    return _pairwise(n, K, edges, seed)

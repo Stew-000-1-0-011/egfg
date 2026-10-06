@@ -7,28 +7,89 @@ from typing import Literal
 
 import numpy as np
 
+from .cost import dag_cost
+from .decompose import clusters, local_problems, stitch
 from .egraph import SaturationResult, saturate
 from .evaluate import MAX_PRODUCT, SUM_PRODUCT, ExpectationSemiring, Table, evaluate, value_feature
-from .extract import Extraction, extract_dag_ilp, extract_tree
-from .ir import all_marginal_queries
+from .extract import Extraction, extract_dag_greedy, extract_dag_ilp, extract_tree
+from .jtree import junction_tree
 from .model import Factor, FactorGraph
 
 
 @dataclass
 class OptimizeResult:
-    saturation: SaturationResult
-    extraction: Extraction
+    saturations: list[SaturationResult]  # one per cluster
+    extraction: Extraction  # the stitched computation of all marginals
+    clusters: list[frozenset[str]]  # variables of each cluster
+    local_extractions: list[Extraction]
+
+    @property
+    def saturation(self) -> SaturationResult:
+        if len(self.saturations) != 1:
+            raise ValueError("decomposed result has one saturation per cluster; use .saturations")
+        return self.saturations[0]
+
+    @property
+    def hit_limit(self) -> bool:
+        return any(s.hit_limit for s in self.saturations)
+
+    @property
+    def num_nodes(self) -> int:
+        return sum(s.num_nodes for s in self.saturations)
+
+    @property
+    def max_cluster_nodes(self) -> int:
+        return max(s.num_nodes for s in self.saturations)
+
+    @property
+    def saturate_s(self) -> float:
+        return sum(s.seconds for s in self.saturations)
+
+    @property
+    def extract_s(self) -> float:
+        return sum(e.seconds for e in self.local_extractions)
+
+
+def _extract(g, fg: FactorGraph, extractor: str, time_limit_s: float) -> Extraction:
+    if extractor == "ilp":
+        return extract_dag_ilp(g, fg, time_limit_s=time_limit_s)
+    if extractor == "greedy":
+        return extract_dag_greedy(g, fg, time_limit_s=time_limit_s)
+    if extractor == "tree":
+        return extract_tree(g, fg)
+    raise ValueError(f"unknown extractor {extractor!r}")
 
 
 def optimize(
     fg: FactorGraph,
-    extractor: Literal["ilp", "tree"] = "ilp",
+    extractor: Literal["ilp", "greedy", "tree"] = "ilp",
     max_iters: int = 30,
     node_limit: int = 50_000,
+    rules: Literal["full", "no_reverse", "minimal"] = "full",
+    cluster_budget: int | None = None,
+    seed: bool = False,
+    time_limit_s: float = 60,
 ) -> OptimizeResult:
-    sat = saturate(fg, all_marginal_queries(fg), max_iters=max_iters, node_limit=node_limit)
-    ex = extract_dag_ilp(sat.graph, fg) if extractor == "ilp" else extract_tree(sat.graph, fg)
-    return OptimizeResult(sat, ex)
+    """Search for a cheap computation of all marginals.
+
+    The defaults reproduce phase 1. `cluster_budget` splits the junction tree
+    into clusters of at most that many variables (larger cliques stay alone);
+    `seed` unions the junction tree computation into each query first.
+    `time_limit_s` bounds each ILP / greedy extraction.
+    """
+    jt = junction_tree(fg)
+    problems = local_problems(fg, jt, clusters(jt, cluster_budget), seed)
+    sats, exs = [], []
+    for p in problems:
+        sat = saturate(
+            fg, p.queries, max_iters=max_iters, node_limit=node_limit, rules=rules, inputs=p.inputs, seeds=p.seeds
+        )
+        sats.append(sat)
+        exs.append(_extract(sat.graph, fg, extractor, time_limit_s))
+    dag = stitch(problems, [e.dag for e in exs])
+    optimal = None if any(e.optimal is None for e in exs) else all(e.optimal for e in exs)
+    ex = Extraction(dag, dag_cost(dag, fg), optimal, sum(e.seconds for e in exs))
+    return OptimizeResult(sats, ex, [p.variables for p in problems], exs)
 
 
 def marginals(fg: FactorGraph, res: OptimizeResult) -> dict[str, np.ndarray]:
