@@ -1,4 +1,4 @@
-"""Extraction from an e-graph: greedy tree extraction and ILP DAG extraction."""
+"""Extraction from an e-graph: tree extraction, greedy DAG extraction and ILP DAG extraction."""
 
 from __future__ import annotations
 
@@ -33,6 +33,8 @@ def class_scopes(g: EGraphData, fg: FactorGraph) -> dict[str, frozenset[str]]:
                 if all(c in scopes for c in n.children):
                     if n.op == "leaf":
                         s = frozenset(fg.factor(n.arg).scope)
+                    elif n.op == "input":
+                        s = g.inputs[n.arg]
                     elif n.op == "mul":
                         s = scopes[n.children[0]] | scopes[n.children[1]]
                     else:
@@ -73,15 +75,12 @@ def _build(g: EGraphData, fg: FactorGraph, choice: dict[str, ENode], optimal, st
             continue
         nodes[cid] = choice[cid]
         stack.extend(choice[cid].children)
-    dag = Dag(nodes, dict(g.roots))
+    dag = Dag(nodes, dict(g.roots), dict(g.inputs))
     return Extraction(dag, dag_cost(dag, fg), optimal, time.perf_counter() - start)
 
 
-def extract_tree(g: EGraphData, fg: FactorGraph) -> Extraction:
-    """Pick, per e-class, the node minimizing own cost + children's tree costs (fixpoint)."""
-    start = time.perf_counter()
-    scopes = class_scopes(g, fg)
-    costs = _costs(g, fg, scopes)
+def _tree_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, ENode]:
+    """Per e-class, the node minimizing own cost + children's tree costs (fixpoint)."""
     best: dict[str, tuple[float, ENode]] = {}
     changed = True
     while changed:
@@ -94,7 +93,103 @@ def extract_tree(g: EGraphData, fg: FactorGraph) -> Extraction:
                 if cid not in best or total < best[cid][0]:
                     best[cid] = (total, n)
                     changed = True
-    return _build(g, fg, {cid: n for cid, (_, n) in best.items()}, None, start)
+    return {cid: n for cid, (_, n) in best.items()}
+
+
+def extract_tree(g: EGraphData, fg: FactorGraph) -> Extraction:
+    start = time.perf_counter()
+    costs = _costs(g, fg, class_scopes(g, fg))
+    return _build(g, fg, _tree_choice(g, costs), None, start)
+
+
+def _start_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, ENode]:
+    """The tree choice, or the tree choice overridden by the seed nodes if that is cheaper.
+
+    Following seed nodes from the roots reaches only seed e-classes, so the
+    overridden choice costs at most the seed terms' own DAG cost.
+    """
+    tree = _tree_choice(g, costs)
+    if not g.seed:
+        return tree
+    seeded = {**tree, **g.seed}
+    ncost = _node_costs(g, costs)
+    roots = g.roots.values()
+    return seeded if _reach_cost(roots, seeded, ncost) <= _reach_cost(roots, tree, ncost) else tree
+
+
+def _node_costs(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[tuple[str, ENode], int]:
+    return {(cid, n): costs[(cid, i)] for cid, nodes in g.classes.items() for i, n in enumerate(nodes)}
+
+
+def _reach_cost(roots, choice: dict[str, ENode], ncost: dict[tuple[str, ENode], int]) -> int | None:
+    """DAG cost of the classes reachable from `roots` under `choice`; None if they form a cycle."""
+    state: dict[str, int] = {}  # 1 = on the DFS path, 2 = finished
+    total = 0
+    for root in roots:
+        if root in state:
+            continue
+        state[root] = 1
+        stack = [(root, iter(choice[root].children))]
+        while stack:
+            cid, it = stack[-1]
+            ch = next(it, None)
+            if ch is None:
+                state[cid] = 2
+                total += ncost[(cid, choice[cid])]
+                stack.pop()
+            elif ch not in state:
+                state[ch] = 1
+                stack.append((ch, iter(choice[ch].children)))
+            elif state[ch] == 1:
+                return None
+    return total
+
+
+def extract_dag_greedy(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) -> Extraction:
+    """Local search on the shared (DAG) cost, starting from the tree (or seed) choice.
+
+    Repeatedly try every other node of every e-class reachable from the roots;
+    keep a switch when the result is acyclic and cheaper. Stop when a full pass
+    finds no improvement or time runs out.
+    """
+    start = time.perf_counter()
+    costs = _costs(g, fg, class_scopes(g, fg))
+    ncost = _node_costs(g, costs)
+    choice = _start_choice(g, costs)
+    roots = list(dict.fromkeys(g.roots.values()))
+    current = _reach_cost(roots, choice, ncost)
+    improved = True
+    while improved and time.perf_counter() - start < time_limit_s:
+        improved = False
+        for cid in _reachable_under(roots, choice):
+            if time.perf_counter() - start >= time_limit_s:
+                break
+            if cid not in choice:
+                continue
+            keep = choice[cid]
+            for n in g.classes[cid]:
+                if n == keep or not all(c in choice for c in n.children):
+                    continue
+                choice[cid] = n
+                c = _reach_cost(roots, choice, ncost)
+                if c is not None and c < current:
+                    current, keep, improved = c, n, True
+                choice[cid] = keep
+    return _build(g, fg, choice, None, start)
+
+
+def _reachable_under(roots, choice: dict[str, ENode]) -> list[str]:
+    seen: set[str] = set()
+    order: list[str] = []
+    stack = list(roots)
+    while stack:
+        cid = stack.pop()
+        if cid in seen:
+            continue
+        seen.add(cid)
+        order.append(cid)
+        stack.extend(choice[cid].children)
+    return order
 
 
 def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) -> Extraction:
@@ -118,9 +213,10 @@ def extract_dag_ilp(g: EGraphData, fg: FactorGraph, time_limit_s: float = 60) ->
         for i, n in enumerate(g.classes[cid]):
             for ch in n.children:
                 prob += x[(cid, i)] <= a[ch]
-    # The tree extraction is acyclic and always valid: it is the warm start for
-    # every solve and the fallback whenever the solver runs out of time.
-    fallback = extract_tree(g, fg)
+    # The start choice (tree extraction, or the seed when cheaper) is acyclic and
+    # always valid: it is the warm start for every solve and the fallback
+    # whenever the solver runs out of time.
+    fallback = _build(g, fg, _start_choice(g, costs), None, start)
     warm = fallback.dag.nodes
 
     def set_warm_start() -> None:

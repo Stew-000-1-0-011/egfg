@@ -107,6 +107,9 @@ def evaluate(dag: Dag, fg: FactorGraph, semiring) -> tuple[dict[str, Table], int
     """Evaluate each reachable node once (memoized); return root tables and the FLOP count."""
     scopes = dag_scopes(dag, fg)
     order = reachable(dag)
+    unresolved = sorted({dag.nodes[nid].arg for nid in order if dag.nodes[nid].op == "input"})
+    if unresolved:
+        raise ValueError(f"Dag still contains input leaves: {unresolved}")
     done: dict[str, Table] = {}
     flops = 0
     # children before parents: process in reverse DFS-discovery order with an explicit check

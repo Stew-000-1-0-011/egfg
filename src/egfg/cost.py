@@ -1,6 +1,6 @@
 """FLOP cost model shared by every module.
 
-leaf = 0; mul = size of the result scope; sum = size of the child scope.
+leaf = input = 0; mul = size of the result scope; sum = size of the child scope.
 DAG cost counts each node reachable from the roots exactly once.
 """
 
@@ -16,7 +16,7 @@ def node_cost(
     child_scopes: list[frozenset[str]],
     fg: FactorGraph,
 ) -> int:
-    if node.op == "leaf":
+    if node.op in ("leaf", "input"):
         return 0
     if node.op == "mul":
         return fg.size(own_scope)

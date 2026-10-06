@@ -1,4 +1,4 @@
-"""Computation terms (Leaf / Mul / Sum) and the shared DAG representation.
+"""Computation terms (Leaf / Mul / Sum / Input) and the shared DAG representation.
 
 A `Dag` is the common currency of the project: queries, extraction results and
 baselines all become a `Dag`, so cost and evaluation are defined once.
@@ -6,7 +6,7 @@ baselines all become a `Dag`, so cost and evaluation are defined once.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, Union
 
 from .model import FactorGraph
@@ -29,14 +29,26 @@ class Sum:
     a: "Term"
 
 
-Term = Union[Leaf, Mul, Sum]
+@dataclass(frozen=True)
+class Input:
+    """A placeholder for a value computed elsewhere (e.g. a message from another cluster).
+
+    Its scope is not stored in the term; it comes from an `inputs` table
+    (name -> scope) carried alongside, such as `Dag.inputs`.
+    """
+
+    name: str
+
+
+Term = Union[Leaf, Mul, Sum, Input]
 
 
 @dataclass(frozen=True)
 class ENode:
-    """op 'leaf': arg = factor id; op 'sum': arg = variable; op 'mul': arg = None."""
+    """op 'leaf': arg = factor id; op 'sum': arg = variable; op 'mul': arg = None;
+    op 'input': arg = input name."""
 
-    op: Literal["leaf", "mul", "sum"]
+    op: Literal["leaf", "mul", "sum", "input"]
     arg: int | str | None
     children: tuple[str, ...]
 
@@ -45,14 +57,17 @@ class ENode:
 class Dag:
     nodes: dict[str, ENode]
     roots: dict[str, str]
+    inputs: dict[str, frozenset[str]] = field(default_factory=dict)  # input name -> scope
 
 
-def term_scope(t: Term, fg: FactorGraph) -> frozenset[str]:
+def term_scope(t: Term, fg: FactorGraph, inputs: dict[str, frozenset[str]] | None = None) -> frozenset[str]:
     if isinstance(t, Leaf):
         return frozenset(fg.factor(t.fid).scope)
+    if isinstance(t, Input):
+        return frozenset((inputs or {})[t.name])
     if isinstance(t, Mul):
-        return term_scope(t.a, fg) | term_scope(t.b, fg)
-    return term_scope(t.a, fg) - {t.var}
+        return term_scope(t.a, fg, inputs) | term_scope(t.b, fg, inputs)
+    return term_scope(t.a, fg, inputs) - {t.var}
 
 
 def marginal_query(fg: FactorGraph, v: str) -> Term:
@@ -70,7 +85,7 @@ def all_marginal_queries(fg: FactorGraph) -> dict[str, Term]:
     return {v: marginal_query(fg, v) for v in fg.variables()}
 
 
-def to_dag(terms: dict[str, Term]) -> Dag:
+def to_dag(terms: dict[str, Term], inputs: dict[str, frozenset[str]] | None = None) -> Dag:
     """Hash-cons the terms into one Dag; identical subterms become one node."""
     nodes: dict[str, ENode] = {}
     memo: dict[ENode, str] = {}
@@ -78,6 +93,8 @@ def to_dag(terms: dict[str, Term]) -> Dag:
     def go(t: Term) -> str:
         if isinstance(t, Leaf):
             node = ENode("leaf", t.fid, ())
+        elif isinstance(t, Input):
+            node = ENode("input", t.name, ())
         elif isinstance(t, Mul):
             node = ENode("mul", None, (go(t.a), go(t.b)))
         else:
@@ -89,7 +106,7 @@ def to_dag(terms: dict[str, Term]) -> Dag:
         return memo[node]
 
     roots = {name: go(t) for name, t in terms.items()}
-    return Dag(nodes, roots)
+    return Dag(nodes, roots, dict(inputs or {}))
 
 
 def dag_scopes(dag: Dag, fg: FactorGraph) -> dict[str, frozenset[str]]:
@@ -110,6 +127,8 @@ def dag_scopes(dag: Dag, fg: FactorGraph) -> dict[str, frozenset[str]]:
                 continue
             if node.op == "leaf":
                 scopes[cur] = frozenset(fg.factor(node.arg).scope)
+            elif node.op == "input":
+                scopes[cur] = dag.inputs[node.arg]
             elif node.op == "mul":
                 scopes[cur] = scopes[node.children[0]] | scopes[node.children[1]]
             else:
