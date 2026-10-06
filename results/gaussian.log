@@ -1,0 +1,464 @@
+[     1s] vec     2 1 KF                   am=0 ok      step=23 kf=23 if=75 correct=True
+[     1s] vec     2 1 IF                   am=0 ok      step=75 kf=23 if=75 correct=True
+[     1s] vec     2 1 light   both total   am=0 ok      step=23 kf=23 if=75 correct=True
+[     2s] vec     2 1 light   both latency am=0 ok      step=23 kf=23 if=75 correct=True
+[     2s] vec     2 1 light   info total   am=0 ok      step=75 kf=23 if=75 correct=True
+[     2s] vec     2 1 light   info latency am=0 ok      step=75 kf=23 if=75 correct=True
+[     3s] vec     2 1 default both total   am=0 ok      step=23 kf=23 if=75 correct=True
+[     3s] vec     2 1 default both latency am=0 ok      step=23 kf=23 if=75 correct=True
+[     3s] vec     2 1 KF                   am=1 ok      step=23 kf=23 if=46 correct=True
+[     3s] vec     2 1 IF                   am=1 ok      step=46 kf=23 if=46 correct=True
+[     3s] vec     2 1 light   both total   am=1 ok      step=23 kf=23 if=46 correct=True
+[     3s] vec     2 1 light   both latency am=1 ok      step=23 kf=23 if=46 correct=True
+[     4s] vec     2 1 light   info total   am=1 ok      step=46 kf=23 if=46 correct=True
+[     4s] vec     2 1 light   info latency am=1 ok      step=46 kf=23 if=46 correct=True
+[     4s] vec     2 1 default both total   am=1 ok      step=23 kf=23 if=46 correct=True
+[     5s] vec     2 1 default both latency am=1 ok      step=23 kf=23 if=46 correct=True
+[     5s] vec     2 2 KF                   am=0 ok      step=40 kf=40 if=92 correct=True
+[     5s] vec     2 2 IF                   am=0 ok      step=92 kf=40 if=92 correct=True
+[     5s] vec     2 2 light   both total   am=0 ok      step=40 kf=40 if=92 correct=True
+[     5s] vec     2 2 light   both latency am=0 ok      step=40 kf=40 if=92 correct=True
+[     6s] vec     2 2 light   info total   am=0 ok      step=92 kf=40 if=92 correct=True
+[     6s] vec     2 2 light   info latency am=0 ok      step=92 kf=40 if=92 correct=True
+[     6s] vec     2 2 default both total   am=0 ok      step=40 kf=40 if=92 correct=True
+[     7s] vec     2 2 default both latency am=0 ok      step=40 kf=40 if=92 correct=True
+[     7s] vec     2 2 KF                   am=1 ok      step=40 kf=40 if=48 correct=True
+[     7s] vec     2 2 IF                   am=1 ok      step=48 kf=40 if=48 correct=True
+[     8s] vec     2 2 light   both total   am=1 ok      step=40 kf=40 if=48 correct=True
+[     8s] vec     2 2 light   both latency am=1 ok      step=40 kf=40 if=48 correct=True
+[     8s] vec     2 2 light   info total   am=1 ok      step=48 kf=40 if=48 correct=True
+[     8s] vec     2 2 light   info latency am=1 ok      step=48 kf=40 if=48 correct=True
+[     9s] vec     2 2 default both total   am=1 ok      step=40 kf=40 if=48 correct=True
+[     9s] vec     2 2 default both latency am=1 ok      step=40 kf=40 if=48 correct=True
+[     9s] vec     2 4 KF                   am=0 ok      step=128 kf=128 if=180 correct=True
+[     9s] vec     2 4 IF                   am=0 ok      step=180 kf=128 if=180 correct=True
+[    10s] vec     2 4 light   both total   am=0 ok      step=128 kf=128 if=180 correct=True
+[    10s] vec     2 4 light   both latency am=0 ok      step=128 kf=128 if=180 correct=True
+[    10s] vec     2 4 light   info total   am=0 ok      step=180 kf=128 if=180 correct=True
+[    10s] vec     2 4 light   info latency am=0 ok      step=180 kf=128 if=180 correct=True
+[    11s] vec     2 4 default both total   am=0 ok      step=128 kf=128 if=180 correct=True
+[    11s] vec     2 4 default both latency am=0 ok      step=128 kf=128 if=180 correct=True
+[    11s] vec     2 4 KF                   am=1 ok      step=128 kf=128 if=52 correct=True
+[    11s] vec     2 4 IF                   am=1 ok      step=52 kf=128 if=52 correct=True
+[    12s] vec     2 4 light   both total   am=1 ok      step=44 kf=128 if=52 correct=True
+[    12s] vec     2 4 light   both latency am=1 ok      step=44 kf=128 if=52 correct=True
+[    12s] vec     2 4 light   info total   am=1 ok      step=52 kf=128 if=52 correct=True
+[    12s] vec     2 4 light   info latency am=1 ok      step=52 kf=128 if=52 correct=True
+[    13s] vec     2 4 default both total   am=1 ok      step=44 kf=128 if=52 correct=True
+[    13s] vec     2 4 default both latency am=1 ok      step=44 kf=128 if=52 correct=True
+[    13s] vec     4 1 KF                   am=0 ok      step=149 kf=149 if=485 correct=True
+[    13s] vec     4 1 IF                   am=0 ok      step=485 kf=149 if=485 correct=True
+[    14s] vec     4 1 light   both total   am=0 ok      step=149 kf=149 if=485 correct=True
+[    14s] vec     4 1 light   both latency am=0 ok      step=149 kf=149 if=485 correct=True
+[    14s] vec     4 1 light   info total   am=0 ok      step=485 kf=149 if=485 correct=True
+[    15s] vec     4 1 light   info latency am=0 ok      step=485 kf=149 if=485 correct=True
+[    15s] vec     4 1 default both total   am=0 ok      step=149 kf=149 if=485 correct=True
+[    15s] vec     4 1 default both latency am=0 ok      step=149 kf=149 if=485 correct=True
+[    16s] vec     4 1 KF                   am=1 ok      step=149 kf=149 if=276 correct=True
+[    16s] vec     4 1 IF                   am=1 ok      step=276 kf=149 if=276 correct=True
+[    16s] vec     4 1 light   both total   am=1 ok      step=149 kf=149 if=276 correct=True
+[    17s] vec     4 1 light   both latency am=1 ok      step=149 kf=149 if=276 correct=True
+[    17s] vec     4 1 light   info total   am=1 ok      step=276 kf=149 if=276 correct=True
+[    17s] vec     4 1 light   info latency am=1 ok      step=276 kf=149 if=276 correct=True
+[    18s] vec     4 1 default both total   am=1 ok      step=149 kf=149 if=276 correct=True
+[    18s] vec     4 1 default both latency am=1 ok      step=149 kf=149 if=276 correct=True
+[    18s] vec     4 2 KF                   am=0 ok      step=184 kf=184 if=520 correct=True
+[    19s] vec     4 2 IF                   am=0 ok      step=520 kf=184 if=520 correct=True
+[    19s] vec     4 2 light   both total   am=0 ok      step=184 kf=184 if=520 correct=True
+[    19s] vec     4 2 light   both latency am=0 ok      step=184 kf=184 if=520 correct=True
+[    19s] vec     4 2 light   info total   am=0 ok      step=520 kf=184 if=520 correct=True
+[    19s] vec     4 2 light   info latency am=0 ok      step=520 kf=184 if=520 correct=True
+[    20s] vec     4 2 default both total   am=0 ok      step=184 kf=184 if=520 correct=True
+[    20s] vec     4 2 default both latency am=0 ok      step=184 kf=184 if=520 correct=True
+[    20s] vec     4 2 KF                   am=1 ok      step=184 kf=184 if=280 correct=True
+[    21s] vec     4 2 IF                   am=1 ok      step=280 kf=184 if=280 correct=True
+[    21s] vec     4 2 light   both total   am=1 ok      step=184 kf=184 if=280 correct=True
+[    21s] vec     4 2 light   both latency am=1 ok      step=184 kf=184 if=280 correct=True
+[    22s] vec     4 2 light   info total   am=1 ok      step=280 kf=184 if=280 correct=True
+[    22s] vec     4 2 light   info latency am=1 ok      step=280 kf=184 if=280 correct=True
+[    22s] vec     4 2 default both total   am=1 ok      step=184 kf=184 if=280 correct=True
+[    23s] vec     4 2 default both latency am=1 ok      step=184 kf=184 if=280 correct=True
+[    23s] vec     4 4 KF                   am=0 ok      step=320 kf=320 if=656 correct=True
+[    23s] vec     4 4 IF                   am=0 ok      step=656 kf=320 if=656 correct=True
+[    23s] vec     4 4 light   both total   am=0 ok      step=320 kf=320 if=656 correct=True
+[    23s] vec     4 4 light   both latency am=0 ok      step=320 kf=320 if=656 correct=True
+[    23s] vec     4 4 light   info total   am=0 ok      step=656 kf=320 if=656 correct=True
+[    24s] vec     4 4 light   info latency am=0 ok      step=656 kf=320 if=656 correct=True
+[    24s] vec     4 4 default both total   am=0 ok      step=320 kf=320 if=656 correct=True
+[    24s] vec     4 4 default both latency am=0 ok      step=320 kf=320 if=656 correct=True
+[    25s] vec     4 4 KF                   am=1 ok      step=320 kf=320 if=288 correct=True
+[    25s] vec     4 4 IF                   am=1 ok      step=288 kf=320 if=288 correct=True
+[    25s] vec     4 4 light   both total   am=1 ok      step=288 kf=320 if=288 correct=True
+[    26s] vec     4 4 light   both latency am=1 ok      step=288 kf=320 if=288 correct=True
+[    26s] vec     4 4 light   info total   am=1 ok      step=288 kf=320 if=288 correct=True
+[    26s] vec     4 4 light   info latency am=1 ok      step=288 kf=320 if=288 correct=True
+[    27s] vec     4 4 default both total   am=1 ok      step=288 kf=320 if=288 correct=True
+[    27s] vec     4 4 default both latency am=1 ok      step=288 kf=320 if=288 correct=True
+[    27s] vec     4 8 KF                   am=0 ok      step=1024 kf=1024 if=1360 correct=True
+[    27s] vec     4 8 IF                   am=0 ok      step=1360 kf=1024 if=1360 correct=True
+[    27s] vec     4 8 light   both total   am=0 ok      step=1024 kf=1024 if=1360 correct=True
+[    28s] vec     4 8 light   both latency am=0 ok      step=1024 kf=1024 if=1360 correct=True
+[    28s] vec     4 8 light   info total   am=0 ok      step=1360 kf=1024 if=1360 correct=True
+[    28s] vec     4 8 light   info latency am=0 ok      step=1360 kf=1024 if=1360 correct=True
+[    28s] vec     4 8 default both total   am=0 ok      step=1024 kf=1024 if=1360 correct=True
+[    29s] vec     4 8 default both latency am=0 ok      step=1024 kf=1024 if=1360 correct=True
+[    29s] vec     4 8 KF                   am=1 ok      step=1024 kf=1024 if=304 correct=True
+[    29s] vec     4 8 IF                   am=1 ok      step=304 kf=1024 if=304 correct=True
+[    30s] vec     4 8 light   both total   am=1 ok      step=304 kf=1024 if=304 correct=True
+[    30s] vec     4 8 light   both latency am=1 ok      step=304 kf=1024 if=304 correct=True
+[    30s] vec     4 8 light   info total   am=1 ok      step=304 kf=1024 if=304 correct=True
+[    31s] vec     4 8 light   info latency am=1 ok      step=304 kf=1024 if=304 correct=True
+[    31s] vec     4 8 default both total   am=1 ok      step=304 kf=1024 if=304 correct=True
+[    31s] vec     4 8 default both latency am=1 ok      step=304 kf=1024 if=304 correct=True
+[    31s] vec     8 1 KF                   am=0 ok      step=1097 kf=1097 if=3465 correct=True
+[    31s] vec     8 1 IF                   am=0 ok      step=3465 kf=1097 if=3465 correct=True
+[    32s] vec     8 1 light   both total   am=0 ok      step=1097 kf=1097 if=3465 correct=True
+[    32s] vec     8 1 light   both latency am=0 ok      step=1097 kf=1097 if=3465 correct=True
+[    32s] vec     8 1 light   info total   am=0 ok      step=3465 kf=1097 if=3465 correct=True
+[    33s] vec     8 1 light   info latency am=0 ok      step=3465 kf=1097 if=3465 correct=True
+[    33s] vec     8 1 default both total   am=0 ok      step=1097 kf=1097 if=3465 correct=True
+[    33s] vec     8 1 default both latency am=0 ok      step=1097 kf=1097 if=3465 correct=True
+[    33s] vec     8 1 KF                   am=1 ok      step=1097 kf=1097 if=1864 correct=True
+[    34s] vec     8 1 IF                   am=1 ok      step=1864 kf=1097 if=1864 correct=True
+[    34s] vec     8 1 light   both total   am=1 ok      step=1097 kf=1097 if=1864 correct=True
+[    34s] vec     8 1 light   both latency am=1 ok      step=1097 kf=1097 if=1864 correct=True
+[    34s] vec     8 1 light   info total   am=1 ok      step=1864 kf=1097 if=1864 correct=True
+[    35s] vec     8 1 light   info latency am=1 ok      step=1864 kf=1097 if=1864 correct=True
+[    35s] vec     8 1 default both total   am=1 ok      step=1097 kf=1097 if=1864 correct=True
+[    35s] vec     8 1 default both latency am=1 ok      step=1097 kf=1097 if=1864 correct=True
+[    36s] vec     8 4 KF                   am=0 ok      step=1472 kf=1472 if=3840 correct=True
+[    36s] vec     8 4 IF                   am=0 ok      step=3840 kf=1472 if=3840 correct=True
+[    36s] vec     8 4 light   both total   am=0 ok      step=1472 kf=1472 if=3840 correct=True
+[    36s] vec     8 4 light   both latency am=0 ok      step=1472 kf=1472 if=3840 correct=True
+[    36s] vec     8 4 light   info total   am=0 ok      step=3840 kf=1472 if=3840 correct=True
+[    37s] vec     8 4 light   info latency am=0 ok      step=3840 kf=1472 if=3840 correct=True
+[    37s] vec     8 4 default both total   am=0 ok      step=1472 kf=1472 if=3840 correct=True
+[    37s] vec     8 4 default both latency am=0 ok      step=1472 kf=1472 if=3840 correct=True
+[    37s] vec     8 4 KF                   am=1 ok      step=1472 kf=1472 if=1888 correct=True
+[    38s] vec     8 4 IF                   am=1 ok      step=1888 kf=1472 if=1888 correct=True
+[    38s] vec     8 4 light   both total   am=1 ok      step=1472 kf=1472 if=1888 correct=True
+[    38s] vec     8 4 light   both latency am=1 ok      step=1472 kf=1472 if=1888 correct=True
+[    39s] vec     8 4 light   info total   am=1 ok      step=1888 kf=1472 if=1888 correct=True
+[    39s] vec     8 4 light   info latency am=1 ok      step=1888 kf=1472 if=1888 correct=True
+[    39s] vec     8 4 default both total   am=1 ok      step=1472 kf=1472 if=1888 correct=True
+[    40s] vec     8 4 default both latency am=1 ok      step=1472 kf=1472 if=1888 correct=True
+[    40s] vec     8 8 KF                   am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[    40s] vec     8 8 IF                   am=0 ok      step=4928 kf=2560 if=4928 correct=True
+[    41s] vec     8 8 light   both total   am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[    41s] vec     8 8 light   both latency am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[    41s] vec     8 8 light   info total   am=0 ok      step=4928 kf=2560 if=4928 correct=True
+[    41s] vec     8 8 light   info latency am=0 ok      step=4928 kf=2560 if=4928 correct=True
+[    41s] vec     8 8 default both total   am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[    42s] vec     8 8 default both latency am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[    42s] vec     8 8 KF                   am=1 ok      step=2560 kf=2560 if=1920 correct=True
+[    42s] vec     8 8 IF                   am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    43s] vec     8 8 light   both total   am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    43s] vec     8 8 light   both latency am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    43s] vec     8 8 light   info total   am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    43s] vec     8 8 light   info latency am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    44s] vec     8 8 default both total   am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    44s] vec     8 8 default both latency am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[    44s] vec     8 16 KF                   am=0 ok      step=8192 kf=8192 if=10560 correct=True
+[    44s] vec     8 16 IF                   am=0 ok      step=10560 kf=8192 if=10560 correct=True
+[    44s] vec     8 16 light   both total   am=0 ok      step=8192 kf=8192 if=10560 correct=True
+[    45s] vec     8 16 light   both latency am=0 ok      step=8192 kf=8192 if=10560 correct=True
+[    45s] vec     8 16 light   info total   am=0 ok      step=10560 kf=8192 if=10560 correct=True
+[    45s] vec     8 16 light   info latency am=0 ok      step=10560 kf=8192 if=10560 correct=True
+[    46s] vec     8 16 default both total   am=0 ok      step=8192 kf=8192 if=10560 correct=True
+[    46s] vec     8 16 default both latency am=0 ok      step=8192 kf=8192 if=10560 correct=True
+[    46s] vec     8 16 KF                   am=1 ok      step=8192 kf=8192 if=1984 correct=True
+[    47s] vec     8 16 IF                   am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    47s] vec     8 16 light   both total   am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    47s] vec     8 16 light   both latency am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    48s] vec     8 16 light   info total   am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    48s] vec     8 16 light   info latency am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    48s] vec     8 16 default both total   am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    49s] vec     8 16 default both latency am=1 ok      step=1984 kf=8192 if=1984 correct=True
+[    49s] blocks  2 1 KF                   am=0 ok      step=23 kf=23 if=75 correct=True
+[    49s] blocks  2 1 IF                   am=0 ok      step=75 kf=23 if=75 correct=True
+[    49s] blocks  2 1 light   both total   am=0 ok      step=13 kf=23 if=75 correct=True
+[    49s] blocks  2 1 light   both latency am=0 ok      step=13 kf=23 if=75 correct=True
+[    49s] blocks  2 1 light   info total   am=0 ok      step=51 kf=23 if=75 correct=True
+[    50s] blocks  2 1 light   info latency am=0 ok      step=51 kf=23 if=75 correct=True
+[    50s] blocks  2 1 default both total   am=0 ok      step=13 kf=23 if=75 correct=True
+[    50s] blocks  2 1 default both latency am=0 ok      step=13 kf=23 if=75 correct=True
+[    50s] blocks  2 1 KF                   am=1 ok      step=23 kf=23 if=46 correct=True
+[    51s] blocks  2 1 IF                   am=1 ok      step=46 kf=23 if=46 correct=True
+[    51s] blocks  2 1 light   both total   am=1 ok      step=13 kf=23 if=46 correct=True
+[    51s] blocks  2 1 light   both latency am=1 ok      step=13 kf=23 if=46 correct=True
+[    52s] blocks  2 1 light   info total   am=1 ok      step=40 kf=23 if=46 correct=True
+[    52s] blocks  2 1 light   info latency am=1 ok      step=40 kf=23 if=46 correct=True
+[    53s] blocks  2 1 default both total   am=1 ok      step=13 kf=23 if=46 correct=True
+[    54s] blocks  2 1 default both latency am=1 ok      step=13 kf=23 if=46 correct=True
+[    54s] blocks  2 2 KF                   am=0 ok      step=184 kf=184 if=520 correct=True
+[    54s] blocks  2 2 IF                   am=0 ok      step=520 kf=184 if=520 correct=True
+[    54s] blocks  2 2 light   both total   am=0 ok      step=104 kf=184 if=520 correct=True
+[    54s] blocks  2 2 light   both latency am=0 ok      step=104 kf=184 if=520 correct=True
+[    54s] blocks  2 2 light   info total   am=0 ok      step=320 kf=184 if=520 correct=True
+[    55s] blocks  2 2 light   info latency am=0 ok      step=320 kf=184 if=520 correct=True
+[    56s] blocks  2 2 default both total   am=0 ok      step=104 kf=184 if=520 correct=True
+[    56s] blocks  2 2 default both latency am=0 ok      step=104 kf=184 if=520 correct=True
+[    56s] blocks  2 2 KF                   am=1 ok      step=184 kf=184 if=280 correct=True
+[    56s] blocks  2 2 IF                   am=1 ok      step=280 kf=184 if=280 correct=True
+[    57s] blocks  2 2 light   both total   am=1 ok      step=104 kf=184 if=280 correct=True
+[    57s] blocks  2 2 light   both latency am=1 ok      step=104 kf=184 if=280 correct=True
+[    57s] blocks  2 2 light   info total   am=1 ok      step=224 kf=184 if=280 correct=True
+[    57s] blocks  2 2 light   info latency am=1 ok      step=224 kf=184 if=280 correct=True
+[    60s] blocks  2 2 default both total   am=1 ok      step=104 kf=184 if=280 correct=True
+[    61s] blocks  2 2 default both latency am=1 ok      step=104 kf=184 if=280 correct=True
+[    61s] blocks  2 4 KF                   am=0 ok      step=1472 kf=1472 if=3840 correct=True
+[    61s] blocks  2 4 IF                   am=0 ok      step=3840 kf=1472 if=3840 correct=True
+[    61s] blocks  2 4 light   both total   am=0 ok      step=832 kf=1472 if=3840 correct=True
+[    61s] blocks  2 4 light   both latency am=0 ok      step=832 kf=1472 if=3840 correct=True
+[    61s] blocks  2 4 light   info total   am=0 ok      step=2208 kf=1472 if=3840 correct=True
+[    61s] blocks  2 4 light   info latency am=0 ok      step=2208 kf=1472 if=3840 correct=True
+[    64s] blocks  2 4 default both total   am=0 ok      step=832 kf=1472 if=3840 correct=True
+[    64s] blocks  2 4 default both latency am=0 ok      step=832 kf=1472 if=3840 correct=True
+[    64s] blocks  2 4 KF                   am=1 ok      step=1472 kf=1472 if=1888 correct=True
+[    64s] blocks  2 4 IF                   am=1 ok      step=1888 kf=1472 if=1888 correct=True
+[    64s] blocks  2 4 light   both total   am=1 ok      step=832 kf=1472 if=1888 correct=True
+[    64s] blocks  2 4 light   both latency am=1 ok      step=832 kf=1472 if=1888 correct=True
+[    64s] blocks  2 4 light   info total   am=1 ok      step=1408 kf=1472 if=1888 correct=True
+[    65s] blocks  2 4 light   info latency am=1 ok      step=1408 kf=1472 if=1888 correct=True
+[    66s] blocks  2 4 default both total   am=1 ok      step=832 kf=1472 if=1888 correct=True
+[    67s] blocks  2 4 default both latency am=1 ok      step=832 kf=1472 if=1888 correct=True
+[    67s] blocks  3 1 KF                   am=0 ok      step=67 kf=67 if=220 correct=True
+[    67s] blocks  3 1 IF                   am=0 ok      step=220 kf=67 if=220 correct=True
+[    67s] blocks  3 1 light   both total   am=0 ok      step=25 kf=67 if=220 correct=True
+[    67s] blocks  3 1 light   both latency am=0 ok      step=25 kf=67 if=220 correct=True
+[    68s] blocks  3 1 light   info total   am=0 ok      step=145 kf=67 if=220 correct=True
+[    68s] blocks  3 1 light   info latency am=0 ok      step=128 kf=67 if=220 correct=True
+[    77s] blocks  3 1 default both total   am=0 ok      step=25 kf=67 if=220 correct=True
+[    83s] blocks  3 1 default both latency am=0 ok      step=25 kf=67 if=220 correct=True
+[    83s] blocks  3 1 KF                   am=1 ok      step=67 kf=67 if=129 correct=True
+[    83s] blocks  3 1 IF                   am=1 ok      step=129 kf=67 if=129 correct=True
+[    83s] blocks  3 1 light   both total   am=1 ok      step=25 kf=67 if=129 correct=True
+[    83s] blocks  3 1 light   both latency am=1 ok      step=25 kf=67 if=129 correct=True
+[    83s] blocks  3 1 light   info total   am=1 ok      step=126 kf=67 if=129 correct=True
+[    83s] blocks  3 1 light   info latency am=1 ok      step=109 kf=67 if=129 correct=True
+[    88s] blocks  3 1 default both total   am=1 ok      step=25 kf=67 if=129 correct=True
+[    94s] blocks  3 1 default both latency am=1 ok      step=25 kf=67 if=129 correct=True
+[    94s] blocks  3 2 KF                   am=0 ok      step=536 kf=536 if=1580 correct=True
+[    94s] blocks  3 2 IF                   am=0 ok      step=1580 kf=536 if=1580 correct=True
+[    94s] blocks  3 2 light   both total   am=0 ok      step=200 kf=536 if=1580 correct=True
+[    94s] blocks  3 2 light   both latency am=0 ok      step=200 kf=536 if=1580 correct=True
+[    94s] blocks  3 2 light   info total   am=0 ok      step=904 kf=536 if=1580 correct=True
+[    94s] blocks  3 2 light   info latency am=0 ok      step=796 kf=536 if=1580 correct=True
+[   110s] blocks  3 2 default both total   am=0 ok      step=200 kf=536 if=1580 correct=True
+[   114s] blocks  3 2 default both latency am=0 ok      step=200 kf=536 if=1580 correct=True
+[   114s] blocks  3 2 KF                   am=1 ok      step=536 kf=536 if=840 correct=True
+[   114s] blocks  3 2 IF                   am=1 ok      step=840 kf=536 if=840 correct=True
+[   114s] blocks  3 2 light   both total   am=1 ok      step=200 kf=536 if=840 correct=True
+[   114s] blocks  3 2 light   both latency am=1 ok      step=200 kf=536 if=840 correct=True
+[   114s] blocks  3 2 light   info total   am=1 ok      step=740 kf=536 if=840 correct=True
+[   114s] blocks  3 2 light   info latency am=1 ok      step=632 kf=536 if=840 correct=True
+[   120s] blocks  3 2 default both total   am=1 ok      step=200 kf=536 if=840 correct=True
+[   135s] blocks  3 2 default both latency am=1 ok      step=200 kf=536 if=840 correct=True
+[   135s] blocks  3 4 KF                   am=0 ok      step=4288 kf=4288 if=11920 correct=True
+[   135s] blocks  3 4 IF                   am=0 ok      step=11920 kf=4288 if=11920 correct=True
+[   135s] blocks  3 4 light   both total   am=0 ok      step=1600 kf=4288 if=11920 correct=True
+[   135s] blocks  3 4 light   both latency am=0 ok      step=1600 kf=4288 if=11920 correct=True
+[   135s] blocks  3 4 light   info total   am=0 ok      step=6208 kf=4288 if=11920 correct=True
+[   135s] blocks  3 4 light   info latency am=0 ok      step=5456 kf=4288 if=11920 correct=True
+[   141s] blocks  3 4 default both total   am=0 ok      step=1600 kf=4288 if=11920 correct=True
+[   147s] blocks  3 4 default both latency am=0 ok      step=1600 kf=4288 if=11920 correct=True
+[   147s] blocks  3 4 KF                   am=1 ok      step=4288 kf=4288 if=5952 correct=True
+[   147s] blocks  3 4 IF                   am=1 ok      step=5952 kf=4288 if=5952 correct=True
+[   147s] blocks  3 4 light   both total   am=1 ok      step=1600 kf=4288 if=5952 correct=True
+[   147s] blocks  3 4 light   both latency am=1 ok      step=1600 kf=4288 if=5952 correct=True
+[   147s] blocks  3 4 light   info total   am=1 ok      step=4848 kf=4288 if=5952 correct=True
+[   147s] blocks  3 4 light   info latency am=1 ok      step=4096 kf=4288 if=5952 correct=True
+[   161s] blocks  3 4 default both total   am=1 ok      step=1600 kf=4288 if=5952 correct=True
+[   164s] blocks  3 4 default both latency am=1 ok      step=1600 kf=4288 if=5952 correct=True
+[   164s] blocks  4 1 KF                   am=0 ok      step=149 kf=149 if=485 correct=True
+[   164s] blocks  4 1 IF                   am=0 ok      step=485 kf=149 if=485 correct=True
+[   164s] blocks  4 1 light   both total   am=0 ok      step=41 kf=149 if=485 correct=True
+[   164s] blocks  4 1 light   both latency am=0 ok      step=41 kf=149 if=485 correct=True
+[   164s] blocks  4 1 light   info total   am=0 ok      step=290 kf=149 if=485 correct=True
+[   164s] blocks  4 1 light   info latency am=0 ok      step=264 kf=149 if=485 correct=True
+[   199s] blocks  4 1 default both total   am=0 ok      step=41 kf=149 if=485 correct=True
+[   235s] blocks  4 1 default both latency am=0 ok      step=41 kf=149 if=485 correct=True
+[   235s] blocks  4 1 KF                   am=1 ok      step=149 kf=149 if=276 correct=True
+[   235s] blocks  4 1 IF                   am=1 ok      step=276 kf=149 if=276 correct=True
+[   235s] blocks  4 1 light   both total   am=1 ok      step=41 kf=149 if=276 correct=True
+[   235s] blocks  4 1 light   both latency am=1 ok      step=41 kf=149 if=276 correct=True
+[   235s] blocks  4 1 light   info total   am=1 ok      step=261 kf=149 if=276 correct=True
+[   235s] blocks  4 1 light   info latency am=1 ok      step=235 kf=149 if=276 correct=True
+[   235s] blocks  4 1 default both total   am=1 ok      step=41 kf=149 if=276 correct=True
+[   262s] blocks  4 1 default both latency am=1 ok      step=41 kf=149 if=276 correct=True
+[   262s] blocks  4 2 KF                   am=0 ok      step=1192 kf=1192 if=3560 correct=True
+[   262s] blocks  4 2 IF                   am=0 ok      step=3560 kf=1192 if=3560 correct=True
+[   262s] blocks  4 2 light   both total   am=0 ok      step=328 kf=1192 if=3560 correct=True
+[   262s] blocks  4 2 light   both latency am=0 ok      step=328 kf=1192 if=3560 correct=True
+[   262s] blocks  4 2 light   info total   am=0 ok      step=1820 kf=1192 if=3560 correct=True
+[   262s] blocks  4 2 light   info latency am=0 ok      step=1648 kf=1192 if=3560 correct=True
+[   262s] blocks  4 2 default both total   am=0 ok      step=328 kf=1192 if=3560 correct=True
+[   309s] blocks  4 2 default both latency am=0 ok      step=328 kf=1192 if=3560 correct=True
+[   309s] blocks  4 2 KF                   am=1 ok      step=1192 kf=1192 if=1872 correct=True
+[   309s] blocks  4 2 IF                   am=1 ok      step=1872 kf=1192 if=1872 correct=True
+[   309s] blocks  4 2 light   both total   am=1 ok      step=328 kf=1192 if=1872 correct=True
+[   309s] blocks  4 2 light   both latency am=1 ok      step=328 kf=1192 if=1872 correct=True
+[   309s] blocks  4 2 light   info total   am=1 ok      step=1572 kf=1192 if=1872 correct=True
+[   309s] blocks  4 2 light   info latency am=1 ok      step=1400 kf=1192 if=1872 correct=True
+[   310s] blocks  4 2 default both total   am=1 ok      step=328 kf=1192 if=1872 correct=True
+[   334s] blocks  4 2 default both latency am=1 ok      step=328 kf=1192 if=1872 correct=True
+[   334s] blocks  4 4 KF                   am=0 ok      step=9536 kf=9536 if=27200 correct=True
+[   334s] blocks  4 4 IF                   am=0 ok      step=27200 kf=9536 if=27200 correct=True
+[   334s] blocks  4 4 light   both total   am=0 ok      step=2624 kf=9536 if=27200 correct=True
+[   334s] blocks  4 4 light   both latency am=0 ok      step=2624 kf=9536 if=27200 correct=True
+[   334s] blocks  4 4 light   info total   am=0 ok      step=12560 kf=9536 if=27200 correct=True
+[   334s] blocks  4 4 light   info latency am=0 ok      step=11328 kf=9536 if=27200 correct=True
+[   360s] blocks  4 4 default both total   am=0 ok      step=2624 kf=9536 if=27200 correct=True
+[   393s] blocks  4 4 default both latency am=0 ok      step=2624 kf=9536 if=27200 correct=True
+[   393s] blocks  4 4 KF                   am=1 ok      step=9536 kf=9536 if=13632 correct=True
+[   393s] blocks  4 4 IF                   am=1 ok      step=13632 kf=9536 if=13632 correct=True
+[   393s] blocks  4 4 light   both total   am=1 ok      step=2624 kf=9536 if=13632 correct=True
+[   393s] blocks  4 4 light   both latency am=1 ok      step=2624 kf=9536 if=13632 correct=True
+[   393s] blocks  4 4 light   info total   am=1 ok      step=10512 kf=9536 if=13632 correct=True
+[   393s] blocks  4 4 light   info latency am=1 ok      step=9280 kf=9536 if=13632 correct=True
+[   393s] blocks  4 4 default both total   am=1 ok      step=2624 kf=9536 if=13632 correct=True
+[   427s] blocks  4 4 default both latency am=1 ok      step=2624 kf=9536 if=13632 correct=True
+[   427s] coupled 2 1 KF                   am=0 ok      step=40 kf=40 if=92 correct=True
+[   427s] coupled 2 1 IF                   am=0 ok      step=92 kf=40 if=92 correct=True
+[   427s] coupled 2 1 light   both total   am=0 ok      step=23 kf=40 if=92 correct=True
+[   427s] coupled 2 1 light   both latency am=0 ok      step=23 kf=40 if=92 correct=True
+[   427s] coupled 2 1 light   info total   am=0 ok      step=58 kf=40 if=92 correct=True
+[   427s] coupled 2 1 light   info latency am=0 ok      step=58 kf=40 if=92 correct=True
+[   427s] coupled 2 1 default both total   am=0 ok      step=23 kf=40 if=92 correct=True
+[   427s] coupled 2 1 default both latency am=0 ok      step=23 kf=40 if=92 correct=True
+[   427s] coupled 2 1 KF                   am=1 ok      step=40 kf=40 if=48 correct=True
+[   427s] coupled 2 1 IF                   am=1 ok      step=48 kf=40 if=48 correct=True
+[   427s] coupled 2 1 light   both total   am=1 ok      step=23 kf=40 if=48 correct=True
+[   427s] coupled 2 1 light   both latency am=1 ok      step=23 kf=40 if=48 correct=True
+[   427s] coupled 2 1 light   info total   am=1 ok      step=44 kf=40 if=48 correct=True
+[   427s] coupled 2 1 light   info latency am=1 ok      step=44 kf=40 if=48 correct=True
+[   434s] coupled 2 1 default both total   am=1 ok      step=23 kf=40 if=48 correct=True
+[   436s] coupled 2 1 default both latency am=1 ok      step=23 kf=40 if=48 correct=True
+[   436s] coupled 2 2 KF                   am=0 ok      step=320 kf=320 if=656 correct=True
+[   436s] coupled 2 2 IF                   am=0 ok      step=656 kf=320 if=656 correct=True
+[   436s] coupled 2 2 light   both total   am=0 ok      step=184 kf=320 if=656 correct=True
+[   436s] coupled 2 2 light   both latency am=0 ok      step=184 kf=320 if=656 correct=True
+[   436s] coupled 2 2 light   info total   am=0 ok      step=360 kf=320 if=656 correct=True
+[   436s] coupled 2 2 light   info latency am=0 ok      step=360 kf=320 if=656 correct=True
+[   454s] coupled 2 2 default both total   am=0 ok      step=184 kf=320 if=656 correct=True
+[   459s] coupled 2 2 default both latency am=0 ok      step=184 kf=320 if=656 correct=True
+[   459s] coupled 2 2 KF                   am=1 ok      step=320 kf=320 if=288 correct=True
+[   459s] coupled 2 2 IF                   am=1 ok      step=288 kf=320 if=288 correct=True
+[   459s] coupled 2 2 light   both total   am=1 ok      step=184 kf=320 if=288 correct=True
+[   459s] coupled 2 2 light   both latency am=1 ok      step=240 kf=320 if=288 correct=True
+[   459s] coupled 2 2 light   info total   am=1 ok      step=240 kf=320 if=288 correct=True
+[   459s] coupled 2 2 light   info latency am=1 ok      step=240 kf=320 if=288 correct=True
+[   464s] coupled 2 2 default both total   am=1 ok      step=184 kf=320 if=288 correct=True
+[   478s] coupled 2 2 default both latency am=1 ok      step=240 kf=320 if=288 correct=True
+[   478s] coupled 2 4 KF                   am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[   478s] coupled 2 4 IF                   am=0 ok      step=4928 kf=2560 if=4928 correct=True
+[   478s] coupled 2 4 light   both total   am=0 ok      step=1472 kf=2560 if=4928 correct=True
+[   478s] coupled 2 4 light   both latency am=0 ok      step=1472 kf=2560 if=4928 correct=True
+[   478s] coupled 2 4 light   info total   am=0 ok      step=2464 kf=2560 if=4928 correct=True
+[   478s] coupled 2 4 light   info latency am=0 ok      step=2464 kf=2560 if=4928 correct=True
+[   487s] coupled 2 4 default both total   am=0 ok      step=1472 kf=2560 if=4928 correct=True
+[   490s] coupled 2 4 default both latency am=0 ok      step=1472 kf=2560 if=4928 correct=True
+[   490s] coupled 2 4 KF                   am=1 ok      step=2560 kf=2560 if=1920 correct=True
+[   490s] coupled 2 4 IF                   am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[   490s] coupled 2 4 light   both total   am=1 ok      step=1472 kf=2560 if=1920 correct=True
+[   490s] coupled 2 4 light   both latency am=1 ok      step=1472 kf=2560 if=1920 correct=True
+[   490s] coupled 2 4 light   info total   am=1 ok      step=1472 kf=2560 if=1920 correct=True
+[   490s] coupled 2 4 light   info latency am=1 ok      step=1472 kf=2560 if=1920 correct=True
+[   500s] coupled 2 4 default both total   am=1 ok      step=1472 kf=2560 if=1920 correct=True
+[   505s] coupled 2 4 default both latency am=1 ok      step=1472 kf=2560 if=1920 correct=True
+[   505s] coupled 3 1 KF                   am=0 ok      step=135 kf=135 if=288 correct=True
+[   505s] coupled 3 1 IF                   am=0 ok      step=288 kf=135 if=288 correct=True
+[   505s] coupled 3 1 light   both total   am=0 ok      step=59 kf=135 if=288 correct=True
+[   505s] coupled 3 1 light   both latency am=0 ok      step=59 kf=135 if=288 correct=True
+[   505s] coupled 3 1 light   info total   am=0 ok      step=165 kf=135 if=288 correct=True
+[   505s] coupled 3 1 light   info latency am=0 ok      step=145 kf=135 if=288 correct=True
+[   558s] coupled 3 1 default both total   am=0 ok      step=129 kf=135 if=288 correct=True
+[   612s] coupled 3 1 default both latency am=0 ok      step=59 kf=135 if=288 correct=True
+[   612s] coupled 3 1 KF                   am=1 ok      step=135 kf=135 if=135 correct=True
+[   612s] coupled 3 1 IF                   am=1 ok      step=135 kf=135 if=135 correct=True
+[   612s] coupled 3 1 light   both total   am=1 ok      step=59 kf=135 if=135 correct=True
+[   612s] coupled 3 1 light   both latency am=1 ok      step=59 kf=135 if=135 correct=True
+[   612s] coupled 3 1 light   info total   am=1 ok      step=142 kf=135 if=135 correct=True
+[   612s] coupled 3 1 light   info latency am=1 ok      step=122 kf=135 if=135 correct=True
+[   612s] coupled 3 1 default both total   am=1 ok      step=129 kf=135 if=135 correct=True
+[   671s] coupled 3 1 default both latency am=1 ok      step=59 kf=135 if=135 correct=True
+[   671s] coupled 3 2 KF                   am=0 ok      step=1080 kf=1080 if=2124 correct=True
+[   671s] coupled 3 2 IF                   am=0 ok      step=2124 kf=1080 if=2124 correct=True
+[   671s] coupled 3 2 light   both total   am=0 ok      step=472 kf=1080 if=2124 correct=True
+[   671s] coupled 3 2 light   both latency am=0 ok      step=472 kf=1080 if=2124 correct=True
+[   671s] coupled 3 2 light   info total   am=0 ok      step=1060 kf=1080 if=2124 correct=True
+[   671s] coupled 3 2 light   info latency am=0 ok      step=880 kf=1080 if=2124 correct=True
+[   671s] coupled 3 2 default both total   am=0 ok      step=1032 kf=1080 if=2124 correct=True
+[   729s] coupled 3 2 default both latency am=0 ok      step=472 kf=1080 if=2124 correct=True
+[   729s] coupled 3 2 KF                   am=1 ok      step=1080 kf=1080 if=864 correct=True
+[   729s] coupled 3 2 IF                   am=1 ok      step=864 kf=1080 if=864 correct=True
+[   729s] coupled 3 2 light   both total   am=1 ok      step=472 kf=1080 if=864 correct=True
+[   729s] coupled 3 2 light   both latency am=1 ok      step=700 kf=1080 if=864 correct=True
+[   729s] coupled 3 2 light   info total   am=1 ok      step=864 kf=1080 if=864 correct=True
+[   729s] coupled 3 2 light   info latency am=1 ok      step=684 kf=1080 if=864 correct=True
+[   729s] coupled 3 2 default both total   am=1 ok      step=472 kf=1080 if=864 correct=True
+[   759s] coupled 3 2 default both latency am=1 ok      step=472 kf=1080 if=864 correct=True
+[   759s] coupled 3 4 KF                   am=0 ok      step=8640 kf=8640 if=16272 correct=True
+[   759s] coupled 3 4 IF                   am=0 ok      step=16272 kf=8640 if=16272 correct=True
+[   759s] coupled 3 4 light   both total   am=0 ok      step=3776 kf=8640 if=16272 correct=True
+[   759s] coupled 3 4 light   both latency am=0 ok      step=6048 kf=8640 if=16272 correct=True
+[   759s] coupled 3 4 light   info total   am=0 ok      step=6480 kf=8640 if=16272 correct=True
+[   759s] coupled 3 4 light   info latency am=0 ok      step=5920 kf=8640 if=16272 correct=True
+[   779s] coupled 3 4 default both total   am=0 ok      step=7632 kf=8640 if=16272 correct=True
+[   846s] coupled 3 4 default both latency am=0 ok      step=3776 kf=8640 if=16272 correct=True
+[   846s] coupled 3 4 KF                   am=1 ok      step=8640 kf=8640 if=6048 correct=True
+[   846s] coupled 3 4 IF                   am=1 ok      step=6048 kf=8640 if=6048 correct=True
+[   846s] coupled 3 4 light   both total   am=1 ok      step=3776 kf=8640 if=6048 correct=True
+[   846s] coupled 3 4 light   both latency am=1 ok      step=4432 kf=8640 if=6048 correct=True
+[   846s] coupled 3 4 light   info total   am=1 ok      step=4864 kf=8640 if=6048 correct=True
+[   846s] coupled 3 4 light   info latency am=1 ok      step=4304 kf=8640 if=6048 correct=True
+[   846s] coupled 3 4 default both total   am=1 ok      step=6016 kf=8640 if=6048 correct=True
+[   867s] coupled 3 4 default both latency am=1 ok      step=5232 kf=8640 if=6048 correct=True
+[   867s] coupled 4 1 KF                   am=0 ok      step=320 kf=320 if=656 correct=True
+[   867s] coupled 4 1 IF                   am=0 ok      step=656 kf=320 if=656 correct=True
+[   867s] coupled 4 1 light   both total   am=0 ok      step=217 kf=320 if=656 correct=True
+[   867s] coupled 4 1 light   both latency am=0 ok      step=200 kf=320 if=656 correct=True
+[   867s] coupled 4 1 light   info total   am=0 ok      step=333 kf=320 if=656 correct=True
+[   867s] coupled 4 1 light   info latency am=0 ok      step=310 kf=320 if=656 correct=True
+[  1036s] coupled 4 1 default both total   am=0 ok      step=281 kf=320 if=656 correct=True
+[  1233s] coupled 4 1 default both latency am=0 ok      step=219 kf=320 if=656 correct=True
+[  1233s] coupled 4 1 KF                   am=1 ok      step=320 kf=320 if=288 correct=True
+[  1233s] coupled 4 1 IF                   am=1 ok      step=288 kf=320 if=288 correct=True
+[  1233s] coupled 4 1 light   both total   am=1 ok      step=217 kf=320 if=288 correct=True
+[  1233s] coupled 4 1 light   both latency am=1 ok      step=200 kf=320 if=288 correct=True
+[  1233s] coupled 4 1 light   info total   am=1 ok      step=301 kf=320 if=288 correct=True
+[  1233s] coupled 4 1 light   info latency am=1 ok      step=278 kf=320 if=288 correct=True
+[  1233s] coupled 4 1 default both total   am=1 ok      step=281 kf=320 if=288 correct=True
+[  1414s] coupled 4 1 default both latency am=1 ok      step=219 kf=320 if=288 correct=True
+[  1414s] coupled 4 2 KF                   am=0 ok      step=2560 kf=2560 if=4928 correct=True
+[  1414s] coupled 4 2 IF                   am=0 ok      step=4928 kf=2560 if=4928 correct=True
+[  1414s] coupled 4 2 light   both total   am=0 ok      step=1736 kf=2560 if=4928 correct=True
+[  1414s] coupled 4 2 light   both latency am=0 ok      step=1824 kf=2560 if=4928 correct=True
+[  1414s] coupled 4 2 light   info total   am=0 ok      step=2092 kf=2560 if=4928 correct=True
+[  1414s] coupled 4 2 light   info latency am=0 ok      step=1824 kf=2560 if=4928 correct=True
+[  1414s] coupled 4 2 default both total   am=0 ok      step=2216 kf=2560 if=4928 correct=True
+[  1615s] coupled 4 2 default both latency am=0 ok      step=2016 kf=2560 if=4928 correct=True
+[  1615s] coupled 4 2 KF                   am=1 ok      step=2560 kf=2560 if=1920 correct=True
+[  1615s] coupled 4 2 IF                   am=1 ok      step=1920 kf=2560 if=1920 correct=True
+[  1615s] coupled 4 2 light   both total   am=1 ok      step=1736 kf=2560 if=1920 correct=True
+[  1615s] coupled 4 2 light   both latency am=1 ok      step=1552 kf=2560 if=1920 correct=True
+[  1615s] coupled 4 2 light   info total   am=1 ok      step=1820 kf=2560 if=1920 correct=True
+[  1615s] coupled 4 2 light   info latency am=1 ok      step=1552 kf=2560 if=1920 correct=True
+[  1615s] coupled 4 2 default both total   am=1 ok      step=1944 kf=2560 if=1920 correct=True
+[  1763s] coupled 4 2 default both latency am=1 ok      step=1664 kf=2560 if=1920 correct=True
+[  1763s] coupled 4 4 KF                   am=0 ok      step=20480 kf=20480 if=38144 correct=True
+[  1763s] coupled 4 4 IF                   am=0 ok      step=38144 kf=20480 if=38144 correct=True
+[  1763s] coupled 4 4 light   both total   am=0 ok      step=13824 kf=20480 if=38144 correct=True
+[  1763s] coupled 4 4 light   both latency am=0 ok      step=11968 kf=20480 if=38144 correct=True
+[  1763s] coupled 4 4 light   info total   am=0 ok      step=13472 kf=20480 if=38144 correct=True
+[  1763s] coupled 4 4 light   info latency am=0 ok      step=11968 kf=20480 if=38144 correct=True
+[  1763s] coupled 4 4 default both total   am=0 ok      step=15264 kf=20480 if=38144 correct=True
+[  1998s] coupled 4 4 default both latency am=0 ok      step=13120 kf=20480 if=38144 correct=True
+[  1998s] coupled 4 4 KF                   am=1 ok      step=20480 kf=20480 if=13824 correct=True
+[  1998s] coupled 4 4 IF                   am=1 ok      step=13824 kf=20480 if=13824 correct=True
+[  1998s] coupled 4 4 light   both total   am=1 ok      step=11584 kf=20480 if=13824 correct=True
+[  1998s] coupled 4 4 light   both latency am=1 ok      step=9728 kf=20480 if=13824 correct=True
+[  1998s] coupled 4 4 light   info total   am=1 ok      step=11232 kf=20480 if=13824 correct=True
+[  1998s] coupled 4 4 light   info latency am=1 ok      step=9728 kf=20480 if=13824 correct=True
+[  1998s] coupled 4 4 default both total   am=1 ok      step=13024 kf=20480 if=13824 correct=True
+[  2111s] coupled 4 4 default both latency am=1 ok      step=10176 kf=20480 if=13824 correct=True
