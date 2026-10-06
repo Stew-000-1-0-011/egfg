@@ -1,0 +1,10 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+[      1s] base         chain         n=4   seed=0 ok      wall=-               cost=96 jt=117 t=0.064
+[      1s] base         star          n=4   seed=0 ok      wall=-               cost=93 jt=117 t=0.054
+[      1s] base         random_tree   n=4   seed=0 ok      wall=-               cost=96 jt=117 t=0.065
+[      1s] base         random_tree   n=4   seed=1 ok      wall=-               cost=96 jt=117 t=0.057
+[      4s] base         chain         n=6   seed=0 ok      wall=-               cost=174 jt=225 t=2.618
+[     11s] base         random_tree   n=6   seed=0 ok      wall=-               cost=171 jt=225 t=4.083
+[     11s] base         random_tree   n=6   seed=1 ok      wall=-               cost=171 jt=225 t=3.967
+[     23s] base         star          n=6   seed=0 ok      wall=-               cost=165 jt=252 t=22.004
+[     39s] base         chain         n=8   seed=0 ok      wall=-               cost=252 jt=333 t=34.674
