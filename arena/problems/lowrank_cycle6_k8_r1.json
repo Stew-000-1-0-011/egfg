@@ -1,0 +1,83 @@
+{
+ "name": "lowrank_cycle6_k8_r1",
+ "variables": {
+  "x0": 8,
+  "x1": 8,
+  "x2": 8,
+  "x3": 8,
+  "x4": 8,
+  "x5": 8
+ },
+ "factors": [
+  {
+   "id": 0,
+   "scope": [
+    "x0",
+    "x1"
+   ],
+   "table": {
+    "kind": "lowrank",
+    "rank": 1
+   }
+  },
+  {
+   "id": 1,
+   "scope": [
+    "x1",
+    "x2"
+   ],
+   "table": {
+    "kind": "lowrank",
+    "rank": 1
+   }
+  },
+  {
+   "id": 2,
+   "scope": [
+    "x2",
+    "x3"
+   ],
+   "table": {
+    "kind": "lowrank",
+    "rank": 1
+   }
+  },
+  {
+   "id": 3,
+   "scope": [
+    "x3",
+    "x4"
+   ],
+   "table": {
+    "kind": "lowrank",
+    "rank": 1
+   }
+  },
+  {
+   "id": 4,
+   "scope": [
+    "x4",
+    "x5"
+   ],
+   "table": {
+    "kind": "lowrank",
+    "rank": 1
+   }
+  },
+  {
+   "id": 5,
+   "scope": [
+    "x5",
+    "x0"
+   ],
+   "table": {
+    "kind": "lowrank",
+    "rank": 1
+   }
+  }
+ ],
+ "tags": [
+  "in_scope"
+ ],
+ "family": "lowrank"
+}

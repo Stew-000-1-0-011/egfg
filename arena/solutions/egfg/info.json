@@ -1,0 +1,98 @@
+{
+ "chain15_k4": {
+  "compile_s": 5.828,
+  "flops": 1052,
+  "egraph_nodes": 60667,
+  "hit_limit": true
+ },
+ "chain8_k8": {
+  "compile_s": 6.068,
+  "flops": 1936,
+  "egraph_nodes": 144379,
+  "hit_limit": true
+ },
+ "cycle10_k4": {
+  "compile_s": 3.026,
+  "flops": 2496,
+  "egraph_nodes": 83934,
+  "hit_limit": true
+ },
+ "cycle8_k4": {
+  "compile_s": 1.525,
+  "flops": 1936,
+  "egraph_nodes": 38102,
+  "hit_limit": false
+ },
+ "grid2x3_k2": {
+  "compile_s": 0.427,
+  "flops": 168,
+  "egraph_nodes": 5725,
+  "hit_limit": false
+ },
+ "grid2x4_k3": {
+  "compile_s": 2.679,
+  "flops": 801,
+  "egraph_nodes": 67854,
+  "hit_limit": true
+ },
+ "lowrank_cycle6_k8_r1": {
+  "compile_s": 2.915,
+  "flops": 264,
+  "egraph_nodes": 65808,
+  "hit_limit": true
+ },
+ "lowrank_cycle8_k12_r3": {
+  "compile_s": 3.941,
+  "flops": 5508,
+  "egraph_nodes": 54555,
+  "hit_limit": true
+ },
+ "sparse10_k3": {
+  "compile_s": 2.564,
+  "flops": 723,
+  "egraph_nodes": 50199,
+  "hit_limit": true
+ },
+ "sparse8_k2": {
+  "compile_s": 2.07,
+  "flops": 254,
+  "egraph_nodes": 55985,
+  "hit_limit": true
+ },
+ "star6_k4": {
+  "compile_s": 0.179,
+  "flops": 284,
+  "egraph_nodes": 3156,
+  "hit_limit": false
+ },
+ "star7_k4": {
+  "compile_s": 0.705,
+  "flops": 348,
+  "egraph_nodes": 15881,
+  "hit_limit": false
+ },
+ "ternary6_k3": {
+  "compile_s": 0.161,
+  "flops": 450,
+  "egraph_nodes": 520,
+  "hit_limit": false
+ },
+ "ternary8_k3": {
+  "compile_s": 0.423,
+  "flops": 693,
+  "egraph_nodes": 5920,
+  "hit_limit": false
+ },
+ "tree12_k3": {
+  "compile_s": 2.653,
+  "flops": 399,
+  "egraph_nodes": 51089,
+  "hit_limit": true
+ },
+ "tree9_k4": {
+  "compile_s": 3.083,
+  "flops": 492,
+  "egraph_nodes": 63995,
+  "hit_limit": true
+ }
+}

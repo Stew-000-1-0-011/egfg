@@ -25,6 +25,7 @@ class OptimizeResult:
     local_extractions: list[Extraction]
     eval_fg: FactorGraph | None = None  # the graph to evaluate on when it differs from the input
     sum_product_only: bool = False  # True when the computation relies on sum-only equalities
+    structured: object | None = None  # the structure.Structured used (low-rank splits), if any
 
     @property
     def saturation(self) -> SaturationResult:
@@ -127,7 +128,7 @@ def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_bu
     ex = _extract(sat.graph, st.fg, extractor, time_limit_s)
     if best is not None and best.cost < ex.cost:
         ex = best
-    return OptimizeResult([sat], ex, [frozenset(fg.variables())], [ex], st.fg, bool(st.equalities))
+    return OptimizeResult([sat], ex, [frozenset(fg.variables())], [ex], st.fg, bool(st.equalities), st)
 
 
 def _eval_fg(fg: FactorGraph, res: OptimizeResult) -> FactorGraph:

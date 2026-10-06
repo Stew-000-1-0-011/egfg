@@ -1,0 +1,45 @@
+# arena：推定プログラムの対戦場
+
+egfg が作る推定プログラムと、LLM が問題ごとに書いた推定プログラムを、同じ条件で比べる。仕様：`docs/superpowers/specs/2026-10-06-arena-design.md`。
+
+## 構成
+
+| 場所 | 中身 |
+|---|---|
+| `arena/problems/*.json` | 公開の問題（構造と表の作り方だけ。表の値はない） |
+| `arena/solutions/egfg/` | egfg が生成したプログラム（`arena/solve_egfg.py`） |
+| `arena/solutions/llm/` | 書く側の LLM が書いたプログラム |
+| `arena/results/` | 採点結果 |
+| `arena/rounds/` | ラウンドごとの記録 |
+
+## プログラムの約束
+
+```python
+def infer(tables: dict[int, numpy.ndarray]) -> dict[str, numpy.ndarray]:
+    # tables: 因子の番号 -> 表（軸は因子の scope の順）
+    # 戻り値: 変数名 -> 正規化した周辺分布（和が 1）
+```
+
+- import できるのは numpy、math、itertools、functools、collections、operator だけ（採点の前に検査する）。
+- 問題の JSON（構造と表の性質。例：`lowrank` なら rank）を見て書いてよい。表の値は実行時にしか渡されない。
+- 前処理（分解など）も `infer` の中で行う（時間に含まれる）。
+
+## 採点
+
+`uv run python arena/score.py --solutions arena/solutions/egfg arena/solutions/llm --out arena/results/<名前>.json`
+
+- 正しさ：採点のたびに選ぶ乱数の種で表を 3 組作り、参照の周辺分布との最大誤差が 1e-6 以下。
+- 速さ：温めの 1 回のあと 7 回測った中央値。
+- 誤りのある側は、その問題で負け。
+
+## egfg の改善の判定（取り置き）
+
+`uv run python arena/holdout_gate.py --seed <種> --out arena/results/<名前>.json`
+
+- 公開されていない問題（同じ種類、より広い大きさの範囲、種から生成）で、egfg の演算回数を best-JT+ と比べた比の幾何平均と、生成したプログラムの正しさ。
+- egfg の改善は、既存のテストがすべて通り、この値が悪くならない（かつ全問正しい）ときだけ採用する。
+
+## 役割と決まり
+
+- **書く側（LLM）**：公開の問題ごとに、できるだけ速く正しいプログラムを書く。egfg のソース（`src/egfg/`）と egfg の解答（`arena/solutions/egfg/`）は読まない。
+- **改善する側（LLM）**：採点結果と書く側のプログラムを読み、egfg（規則、表現、探索、コード生成）を改善する。取り置きの問題の生成の中身や乱数の種に合わせ込まない。足した規則は、乱数での評価と総当たりとの一致で確かめる。

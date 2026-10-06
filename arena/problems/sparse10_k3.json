@@ -1,0 +1,131 @@
+{
+ "name": "sparse10_k3",
+ "variables": {
+  "x0": 3,
+  "x1": 3,
+  "x2": 3,
+  "x3": 3,
+  "x4": 3,
+  "x5": 3,
+  "x6": 3,
+  "x7": 3,
+  "x8": 3,
+  "x9": 3
+ },
+ "factors": [
+  {
+   "id": 0,
+   "scope": [
+    "x0",
+    "x1"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 1,
+   "scope": [
+    "x0",
+    "x2"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 2,
+   "scope": [
+    "x0",
+    "x3"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 3,
+   "scope": [
+    "x0",
+    "x4"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 4,
+   "scope": [
+    "x1",
+    "x5"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 5,
+   "scope": [
+    "x0",
+    "x6"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 6,
+   "scope": [
+    "x4",
+    "x7"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 7,
+   "scope": [
+    "x3",
+    "x8"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 8,
+   "scope": [
+    "x2",
+    "x9"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 9,
+   "scope": [
+    "x1",
+    "x3"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 10,
+   "scope": [
+    "x3",
+    "x7"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  }
+ ],
+ "tags": [
+  "in_scope"
+ ],
+ "family": "sparse"
+}

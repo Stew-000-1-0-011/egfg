@@ -1,0 +1,87 @@
+{
+ "name": "grid2x3_k2",
+ "variables": {
+  "x0": 2,
+  "x1": 2,
+  "x2": 2,
+  "x3": 2,
+  "x4": 2,
+  "x5": 2
+ },
+ "factors": [
+  {
+   "id": 0,
+   "scope": [
+    "x0",
+    "x1"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 1,
+   "scope": [
+    "x0",
+    "x3"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 2,
+   "scope": [
+    "x1",
+    "x2"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 3,
+   "scope": [
+    "x1",
+    "x4"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 4,
+   "scope": [
+    "x2",
+    "x5"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 5,
+   "scope": [
+    "x3",
+    "x4"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 6,
+   "scope": [
+    "x4",
+    "x5"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  }
+ ],
+ "tags": [
+  "in_scope"
+ ],
+ "family": "grid"
+}

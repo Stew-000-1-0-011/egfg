@@ -1,0 +1,161 @@
+{
+ "name": "chain8_k8",
+ "variables": {
+  "x0": 8,
+  "x1": 8,
+  "x2": 8,
+  "x3": 8,
+  "x4": 8,
+  "x5": 8,
+  "x6": 8,
+  "x7": 8
+ },
+ "factors": [
+  {
+   "id": 0,
+   "scope": [
+    "x0",
+    "x1"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 1,
+   "scope": [
+    "x1",
+    "x2"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 2,
+   "scope": [
+    "x2",
+    "x3"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 3,
+   "scope": [
+    "x3",
+    "x4"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 4,
+   "scope": [
+    "x4",
+    "x5"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 5,
+   "scope": [
+    "x5",
+    "x6"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 6,
+   "scope": [
+    "x6",
+    "x7"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 7,
+   "scope": [
+    "x0"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 8,
+   "scope": [
+    "x1"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 9,
+   "scope": [
+    "x2"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 10,
+   "scope": [
+    "x3"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 11,
+   "scope": [
+    "x4"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 12,
+   "scope": [
+    "x5"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 13,
+   "scope": [
+    "x6"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  },
+  {
+   "id": 14,
+   "scope": [
+    "x7"
+   ],
+   "table": {
+    "kind": "dense"
+   }
+  }
+ ],
+ "tags": [
+  "in_scope"
+ ],
+ "family": "chain"
+}
