@@ -31,19 +31,6 @@ HERE = Path(__file__).resolve().parent
 TOL = 1e-6
 
 
-def larger_problems() -> list[dict]:
-    rng = np.random.default_rng(5)
-    p = arena._pairwise_spec
-    return [
-        p("big_chain32_k32", 32, 32, [(i, i + 1) for i in range(31)], unary=True),
-        p("big_cycle16_k16", 16, 16, [(i, (i + 1) % 16) for i in range(16)]),
-        p("big_tree30_k8", 30, 8, arena._tree_edges(30, rng)),
-        p("big_grid4x4_k3", 16, 3, arena._grid_edges(4, 4)),
-        p("big_lowrank_cycle12_k32_r2", 12, 32, [(i, (i + 1) % 12) for i in range(12)],
-          {"kind": "lowrank", "rank": 2}),
-    ]
-
-
 def build(prefix: Path, out: Path) -> Path:
     exe = out / "bench"
     subprocess.run(["g++", "-O3", "-march=native", "-std=c++17", str(HERE / "bench.cpp"), "-o", str(exe),
@@ -95,7 +82,7 @@ def main() -> None:
         work = Path(tmp)
         exe = build(args.gtsam, work)
         public = [arena.load(p) for p in sorted((ROOT / "arena" / "problems").glob("*.json"))]
-        for problem in public + larger_problems():
+        for problem in public + arena.larger_problems():
             tables = arena.draw_tables(problem, args.seed)
             row = {"gtsam_cpp": run_gtsam(exe, problem, tables, work)}
             if problem["name"] in other:

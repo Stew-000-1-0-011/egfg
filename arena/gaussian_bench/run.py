@@ -1,8 +1,8 @@
 """Linear-Gaussian filtering in C: egfg's programs against the Kalman and information filters
-(the same C code generation) and GTSAM (C++).
+(the same C code generation), GTSAM (C++) and dynamax (JAX).
 
 Usage:
-  uv run python arena/gaussian_bench/run.py --gtsam <GTSAM install prefix> --out arena/results/gaussian_c.json
+  uv run --group libs python arena/gaussian_bench/run.py --gtsam <GTSAM install prefix> --out arena/results/gaussian_c.json
 The models are phase D's (vec, blocks, coupled), plus larger ones. Every program is checked
 against the numpy Kalman filter (`kalman_reference`) on the first steps; the time is per step,
 averaged over a run of T steps (the median of 7 runs).
@@ -99,6 +99,44 @@ def check(model, obs, flat: np.ndarray, stacked: bool) -> float:
     return err
 
 
+def run_dynamax(model, obs) -> tuple[np.ndarray, float]:
+    """dynamax's Kalman filter (JAX, jit-compiled scan over all steps) on the stacked model.
+    It also computes the log-likelihood, which the other programs leave out."""
+    import jax
+
+    jax.config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
+    from dynamax.linear_gaussian_ssm.inference import (
+        ParamsLGSSM,
+        ParamsLGSSMDynamics,
+        ParamsLGSSMEmissions,
+        ParamsLGSSMInitial,
+        lgssm_filter,
+    )
+
+    st = stack(model)
+    (p,), (tr,), (ob,) = st.initial, st.transition, st.observation
+    N, M = len(p.b), len(ob.b)
+    params = ParamsLGSSM(
+        initial=ParamsLGSSMInitial(mean=jnp.array(p.b), cov=jnp.array(p.Q)),
+        dynamics=ParamsLGSSMDynamics(weights=jnp.array(tr.A[0]), bias=jnp.array(tr.b),
+                                     input_weights=jnp.zeros((N, 0)), cov=jnp.array(tr.Q)),
+        emissions=ParamsLGSSMEmissions(weights=jnp.array(ob.A[0]), bias=jnp.array(ob.b),
+                                       input_weights=jnp.zeros((M, 0)), cov=jnp.array(ob.Q)))
+    ys = jnp.array([y for (y,) in stack_obs(obs)])
+    run = jax.jit(lambda ys: lgssm_filter(params, ys))
+    post = run(ys)
+    flat = np.concatenate([np.concatenate([np.asarray(post.filtered_means[t]), np.asarray(post.filtered_covariances[t]).ravel()])
+                           for t in range(TC)])
+    samples = []
+    for _ in range(7):
+        t0 = time.perf_counter()
+        for _ in range(20):
+            jax.block_until_ready(run(ys))
+        samples.append((time.perf_counter() - t0) / (20 * len(obs)))
+    return flat, sorted(samples)[3]
+
+
 def c_program(prog, data: Path, work: Path, tag: str) -> dict:
     src = work / f"{tag}.c"
     src.write_text(generate_gaussian_c(prog))
@@ -146,6 +184,8 @@ def main() -> None:
             for tag in ("kf", "fg"):
                 flat, t = run_exe([str(gexe), str(data), tag])
                 row[f"gtsam_{tag}"] = {"time_s": t, "max_rel_err": check(model, obs, flat, False)}
+            flat, t = run_dynamax(model, obs)
+            row["dynamax"] = {"time_s": t, "max_rel_err": check(model, obs, flat, True)}
             for k, v in row.items():
                 if isinstance(v, dict):
                     v["status"] = "ok" if v["max_rel_err"] <= TOL else "wrong"
@@ -154,7 +194,7 @@ def main() -> None:
                   "(ns/step)", f"search {row['egfg_compile_s']}s", flush=True)
     gm = lambda xs: math.exp(sum(map(math.log, xs)) / len(xs))  # noqa: E731
     summary = {f"{a}/egfg_c": gm([r[a]["time_s"] / r["egfg_c"]["time_s"] for r in results])
-               for a in ("kf_c", "if_c", "gtsam_kf", "gtsam_fg")}
+               for a in ("kf_c", "if_c", "gtsam_kf", "gtsam_fg", "dynamax")}
     print(json.dumps(summary))
     if args.out:
         Path(args.out).write_text(json.dumps({"T": T, "models": results, "summary": summary}, indent=1, default=str))

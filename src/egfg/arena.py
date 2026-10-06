@@ -115,6 +115,20 @@ def public_problems() -> list[dict]:
     return out
 
 
+def larger_problems() -> list[dict]:
+    """A few problems larger than the public ones (for comparisons with existing tools)."""
+    rng = np.random.default_rng(5)
+    p = _pairwise_spec
+    return [
+        p("big_chain32_k32", 32, 32, [(i, i + 1) for i in range(31)], unary=True),
+        p("big_cycle16_k16", 16, 16, [(i, (i + 1) % 16) for i in range(16)]),
+        p("big_tree30_k8", 30, 8, _tree_edges(30, rng)),
+        p("big_grid4x4_k3", 16, 3, _grid_edges(4, 4)),
+        p("big_lowrank_cycle12_k32_r2", 12, 32, [(i, (i + 1) % 12) for i in range(12)],
+          {"kind": "lowrank", "rank": 2}),
+    ]
+
+
 def holdout_problems(seed: int, per_family: int = 2) -> list[dict]:
     """Problems the improving side never sees: same families, structures drawn from `seed`."""
     out, seen = [], {p["name"] for p in public_problems()}
