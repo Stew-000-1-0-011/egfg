@@ -218,6 +218,13 @@ def _template(sat, loc, facs, dims, fwd_rep, reps, method, weights_mode, time_li
         M = 10 * base.cost + 1
         weights = {cid: M if leaves[cid] & loc.obs_ids else 1 for cid in g.classes}
     ch = extract_rep(g, impls, roots, method, weights, time_limit_s)
+    if weights is not None:
+        # local search may get stuck from the weighted start: the total-cost
+        # solution is a valid candidate too; keep whichever is lower when weighted
+        plain = extract_rep(g, impls, roots, method, None, time_limit_s)
+        plain_w = sum(im.cost * weights.get(s[0], 1) for s, im in plain.choice.items())
+        if plain_w < ch.weighted_cost:
+            ch = RepChoice(plain.choice, plain.roots, plain.cost, plain_w, plain.optimal, plain.seconds)
     prep = sum(im.cost for s, im in ch.choice.items() if not (leaves[s[0]] & loc.obs_ids))
     counts: dict[str, int] = {}
     for im in ch.choice.values():

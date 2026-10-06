@@ -262,3 +262,12 @@ def test_latency_objective_splits_prediction():
     assert lat.step.prep_cost + lat.step.latency_cost == lat.step.cost
     obs = gaussian_observations(model, 4)
     _same(gaussian_filter(lat, obs), kalman_reference(model, obs), model)
+
+
+def test_latency_objective_never_worse_in_latency():
+    for model in (gaussian_coupled(3, 2), gaussian_coupled(2, 2), gaussian_blocks(2, 2)):
+        for am in (False, True):
+            tot = compile_gaussian_filter(model, extractor="greedy", rules="minimal", amortize_constants=am)
+            lat = compile_gaussian_filter(model, extractor="greedy", rules="minimal", amortize_constants=am,
+                                          objective="latency")
+            assert lat.step.latency_cost <= tot.step.latency_cost
