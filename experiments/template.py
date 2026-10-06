@@ -30,8 +30,8 @@ QUICK_MODELS = ["hmm", "fhmm2", "chmm2"]
 SETTINGS = {
     "forward": None,
     "jt": None,
-    "default": dict(rules="full", seed=True, extractor="ilp"),
-    "light": dict(rules="minimal", seed=True, extractor="greedy"),
+    "default": dict(rules="full", seed=True, extractor="ilp", strategy="bfs"),
+    "light": dict(rules="minimal", seed=True, extractor="greedy", strategy="bfs"),
 }
 QUICK_SETTINGS = ["forward", "default", "light"]
 TS = [1, 2, 4, 8, 16, 64, 256, 1024]

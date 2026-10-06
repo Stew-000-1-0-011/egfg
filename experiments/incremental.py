@@ -32,8 +32,8 @@ T = 64
 MODELS = ["hmm", "fhmm2", "fhmm3", "fhmm4", "chmm2", "chmm3", "chmm4"]
 QUICK_MODELS = ["hmm", "fhmm2", "chmm2"]
 SEARCHES = {
-    "light": dict(rules="minimal", seed=True, extractor="greedy"),
-    "default": dict(rules="full", seed=True, extractor="ilp"),
+    "light": dict(rules="minimal", seed=True, extractor="greedy", strategy="bfs"),
+    "default": dict(rules="full", seed=True, extractor="ilp", strategy="bfs"),
 }
 QUICK_SEARCHES = ["light"]
 OBJECTIVES = ["total", "latency", "weighted:2", "weighted:4", "weighted:10"]

@@ -223,28 +223,25 @@ def compile_filter(
     node_limit: int = 50_000,
     time_limit_s: float = 60,
     objective: str = "total",
+    strategy: str = "staged",
 ) -> FilterProgram:
-    """Search the head and step templates once each.
+    """Search the head and step templates once each (`strategy`: see search.py).
 
     `objective`: "total" minimizes the step cost; "latency" minimizes the cost of
     the nodes that wait for the observations, then the total; "weighted:L" counts
     those nodes L times.
     """
     from .pipeline import _extract
+    from .search import run_strategy
 
     start = time.perf_counter()
     fwd = forward_program(model) if objective != "total" else None
     temps = []
     for kind in ("head", "step"):
         loc = local_step(model, kind)
-        sat = saturate(
-            loc.fg,
-            loc.queries,
-            max_iters=max_iters,
-            node_limit=node_limit,
-            rules=rules,
-            inputs=loc.inputs,
-            seeds=loc.seeds if seed else None,
+        sat, _ = run_strategy(
+            loc.fg, loc.queries, strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
+            inputs=loc.inputs, seeds=loc.seeds if seed else None,
         )
         weights = None
         if objective != "total":

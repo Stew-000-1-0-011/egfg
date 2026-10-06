@@ -55,8 +55,8 @@ def settings(quick: bool) -> list[dict]:
 
 
 SEARCH = {
-    "light": dict(rules="minimal", seed=True, extractor="greedy"),
-    "default": dict(rules="full", seed=True, extractor="ilp", time_limit_s=ILP_LIMIT_S),
+    "light": dict(rules="minimal", seed=True, extractor="greedy", strategy="bfs"),
+    "default": dict(rules="full", seed=True, extractor="ilp", time_limit_s=ILP_LIMIT_S, strategy="bfs"),
 }
 
 COLUMNS = (
@@ -88,8 +88,8 @@ def worker(spec: dict) -> dict:
     model = make(spec["model"], spec["p1"], spec["p2"])
     st = spec["setting"]
     am = st["amortize"]
-    kf = kalman_program(model, extractor="tree", amortize_constants=am)
-    inf = information_program(model, extractor="tree", amortize_constants=am)
+    kf = kalman_program(model, extractor="tree", amortize_constants=am, strategy="bfs")
+    inf = information_program(model, extractor="tree", amortize_constants=am, strategy="bfs")
     if st["name"] == "KF":
         prog = kf
     elif st["name"] == "IF":

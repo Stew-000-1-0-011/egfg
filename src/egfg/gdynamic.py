@@ -14,7 +14,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from .dynamic import FWD, MSG, DynamicModel, LocalStep, at, local_step, split
-from .egraph import SaturationResult, saturate
+from .egraph import SaturationResult
+from .search import run_strategy
 from .extract import class_leaves, class_scopes
 from .gaussian import (
     GFactor,
@@ -243,6 +244,7 @@ def compile_gaussian_filter(
     node_limit: int = 50_000,
     time_limit_s: float = 60,
     amortize_constants: bool = False,
+    strategy: str = "staged",
 ) -> GFilterProgram:
     """Search the head and step templates; choose the message representation too.
 
@@ -256,8 +258,8 @@ def compile_gaussian_filter(
     sats = {}
     for kind in ("head", "step"):
         loc = local_step(struct, kind)
-        sat = saturate(loc.fg, loc.queries, max_iters=max_iters, node_limit=node_limit, rules=rules,
-                       inputs=loc.inputs, seeds=loc.seeds if seed else None)
+        sat, _ = run_strategy(loc.fg, loc.queries, strategy, max_iters=max_iters, node_limit=node_limit,
+                              rules=rules, inputs=loc.inputs, seeds=loc.seeds if seed else None)
         sats[kind] = (loc, sat)
     best = None
     for r in REPS[reps]:

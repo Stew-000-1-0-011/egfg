@@ -28,18 +28,18 @@ TIME_LIMIT_S = 120  # saturation + extraction, per run
 K = 3
 
 CONFIGS: dict[str, dict] = {
-    "base": dict(rules="full", cluster_budget=None, seed=False, extractor="ilp"),
-    "R=no_reverse": dict(rules="no_reverse", cluster_budget=None, seed=False, extractor="ilp"),
-    "R=minimal": dict(rules="minimal", cluster_budget=None, seed=False, extractor="ilp"),
-    "D=3": dict(rules="full", cluster_budget=3, seed=False, extractor="ilp"),
-    "D=5": dict(rules="full", cluster_budget=5, seed=False, extractor="ilp"),
-    "D=8": dict(rules="full", cluster_budget=8, seed=False, extractor="ilp"),
-    "S=on": dict(rules="full", cluster_budget=None, seed=True, extractor="ilp"),
-    "X=tree": dict(rules="full", cluster_budget=None, seed=False, extractor="tree"),
-    "X=greedy": dict(rules="full", cluster_budget=None, seed=False, extractor="greedy"),
-    "light": dict(rules="minimal", cluster_budget=3, seed=True, extractor="greedy"),
-    "mid": dict(rules="no_reverse", cluster_budget=5, seed=True, extractor="greedy"),
-    "precise": dict(rules="no_reverse", cluster_budget=5, seed=True, extractor="ilp"),
+    "base": dict(strategy="bfs", rules="full", cluster_budget=None, seed=False, extractor="ilp"),
+    "R=no_reverse": dict(strategy="bfs", rules="no_reverse", cluster_budget=None, seed=False, extractor="ilp"),
+    "R=minimal": dict(strategy="bfs", rules="minimal", cluster_budget=None, seed=False, extractor="ilp"),
+    "D=3": dict(strategy="bfs", rules="full", cluster_budget=3, seed=False, extractor="ilp"),
+    "D=5": dict(strategy="bfs", rules="full", cluster_budget=5, seed=False, extractor="ilp"),
+    "D=8": dict(strategy="bfs", rules="full", cluster_budget=8, seed=False, extractor="ilp"),
+    "S=on": dict(strategy="bfs", rules="full", cluster_budget=None, seed=True, extractor="ilp"),
+    "X=tree": dict(strategy="bfs", rules="full", cluster_budget=None, seed=False, extractor="tree"),
+    "X=greedy": dict(strategy="bfs", rules="full", cluster_budget=None, seed=False, extractor="greedy"),
+    "light": dict(strategy="bfs", rules="minimal", cluster_budget=3, seed=True, extractor="greedy"),
+    "mid": dict(strategy="bfs", rules="no_reverse", cluster_budget=5, seed=True, extractor="greedy"),
+    "precise": dict(strategy="bfs", rules="no_reverse", cluster_budget=5, seed=True, extractor="ilp"),
 }
 QUICK_CONFIGS = ["base", "D=3", "S=on", "X=greedy", "light"]
 
@@ -99,7 +99,7 @@ def worker(spec: dict) -> dict:
 
     fg = make_graph(spec["family"], spec["n"], spec["seed"])
     t0 = time.perf_counter()
-    res = optimize(fg, **CONFIGS[spec["config"]])
+    res = optimize(fg, **CONFIGS[spec["config"]])  # strategy pinned to "bfs": the phase A setting
     total = time.perf_counter() - t0
 
     jt, _ = junction_tree_dag(fg)

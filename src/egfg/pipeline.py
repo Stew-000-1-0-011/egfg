@@ -9,7 +9,8 @@ import numpy as np
 
 from .cost import dag_cost
 from .decompose import clusters, local_problems, stitch
-from .egraph import SaturationResult, saturate
+from .egraph import SaturationResult
+from .search import run_strategy
 from .evaluate import MAX_PRODUCT, SUM_PRODUCT, ExpectationSemiring, Table, evaluate, value_feature
 from .extract import Extraction, extract_dag_greedy, extract_dag_ilp, extract_tree
 from .jtree import junction_tree
@@ -69,10 +70,12 @@ def optimize(
     cluster_budget: int | None = None,
     seed: bool = False,
     time_limit_s: float = 60,
+    strategy: str = "seeds+staged",
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
 
-    The defaults reproduce phase 1. `cluster_budget` splits the junction tree
+    `strategy` orders the rewrites (see search.py); "bfs" with the other defaults
+    reproduces phase 1. `cluster_budget` splits the junction tree
     into clusters of at most that many variables (larger cliques stay alone);
     `seed` unions the junction tree computation into each query first.
     `time_limit_s` bounds each ILP / greedy extraction.
@@ -81,11 +84,15 @@ def optimize(
     problems = local_problems(fg, jt, clusters(jt, cluster_budget), seed)
     sats, exs = [], []
     for p in problems:
-        sat = saturate(
-            fg, p.queries, max_iters=max_iters, node_limit=node_limit, rules=rules, inputs=p.inputs, seeds=p.seeds
+        sat, best = run_strategy(
+            fg, p.queries, strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
+            inputs=p.inputs, seeds=p.seeds,
         )
         sats.append(sat)
-        exs.append(_extract(sat.graph, fg, extractor, time_limit_s))
+        ex = _extract(sat.graph, fg, extractor, time_limit_s)
+        if best is not None and best.cost < ex.cost:  # restart remembers its best round
+            ex = best
+        exs.append(ex)
     dag = stitch(problems, [e.dag for e in exs])
     optimal = None if any(e.optimal is None for e in exs) else all(e.optimal for e in exs)
     ex = Extraction(dag, dag_cost(dag, fg), optimal, sum(e.seconds for e in exs))

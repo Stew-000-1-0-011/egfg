@@ -96,3 +96,40 @@ def test_best_jt_baselines(fg):
     dag2, c2, _ = best_junction_tree(fg, share_products=True)
     assert c2 <= c1 <= jt
     assert _correct(dag1, fg) and _correct(dag2, fg)
+
+
+# --- the default strategy -----------------------------------------------------
+
+
+def test_optimize_default_is_seeds_staged_and_bfs_is_phase1():
+    from egfg.pipeline import marginals, optimize
+
+    fg = random_tree(12, 3, 0)
+    new = optimize(fg, extractor="greedy")
+    old = optimize(fg, extractor="greedy", strategy="bfs")
+    ref = saturate(fg, all_marginal_queries(fg))
+    assert old.saturation.num_nodes == ref.num_nodes and old.saturation.iterations == ref.iterations
+    assert new.extraction.cost <= best_junction_tree(fg)[1] < old.extraction.cost
+    bm = brute_force_marginals(fg)
+    assert all(np.allclose(marginals(fg, new)[v], bm[v]) for v in fg.variables())
+
+
+def test_local_problems_drop_order_seeds():
+    # clusters have Input leaves: "seeds+staged" falls back to staged with the cluster's own seeds
+    from egfg.pipeline import marginals, optimize
+
+    fg = grid(2, 5, 2, 1)
+    res = optimize(fg, cluster_budget=3, seed=True, extractor="greedy")
+    bm = brute_force_marginals(fg)
+    assert all(np.allclose(marginals(fg, res)[v], bm[v]) for v in fg.variables())
+
+
+def test_filter_default_strategy_is_correct():
+    from egfg.dynamic import compile_filter, filter_marginals, reference_filter
+    from egfg.generators import coupled_hmm, random_observations
+
+    model = coupled_hmm(3, 2)
+    obs = random_observations(model, 5)
+    fm = filter_marginals(compile_filter(model, extractor="greedy"), obs)
+    ref = reference_filter(model, obs)
+    assert all(np.allclose(fm[t][n], ref[t][n]) for t in range(5) for n in model.states)

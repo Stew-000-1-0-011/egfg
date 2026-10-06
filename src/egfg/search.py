@@ -240,3 +240,37 @@ def extract_result(res: SearchResult, fg: FactorGraph, extractor: str = "greedy"
     if res.best is not None and res.best.cost < ex.cost:
         return res.best
     return ex
+
+
+DEFAULT_STRATEGY = "seeds+staged"
+
+
+def run_strategy(
+    fg: FactorGraph,
+    queries: dict[str, Term],
+    strategy: str = DEFAULT_STRATEGY,
+    max_iters: int = 30,
+    node_limit: int = 50_000,
+    rules: str = "full",
+    inputs: dict[str, frozenset[str]] | None = None,
+    seeds: dict[str, Term] | None = None,
+    time_limit_s: float = 120,
+):
+    """Saturate with a strategy; returns (SaturationResult, best extraction found on the way or None).
+
+    "bfs" is exactly `saturate`. The junction-tree seeds of the "seeds" strategies are
+    built from the factor graph, which only describes the whole problem when there are
+    no Input leaves; for local problems (clusters, time steps) "seeds+X" therefore
+    becomes X with the problem's own seeds.
+    """
+    from .egraph import SaturationResult, saturate
+
+    if inputs and strategy.startswith("seeds"):
+        strategy = strategy.split("+")[1] if "+" in strategy else "bfs"
+    if strategy == "bfs":
+        return saturate(fg, queries, max_iters=max_iters, node_limit=node_limit, rules=rules,
+                        inputs=inputs, seeds=seeds), None
+    cfg = SearchConfig(strategy=strategy, rules=rules, node_limit=node_limit, max_steps=max_iters,
+                       time_limit_s=time_limit_s)
+    res = search(fg, queries, cfg, inputs=inputs, seeds=seeds)
+    return SaturationResult(res.graph, res.steps, res.hit_limit, res.seconds, res.num_nodes), res.best
