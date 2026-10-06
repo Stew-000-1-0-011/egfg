@@ -271,3 +271,40 @@ def test_latency_objective_never_worse_in_latency():
             lat = compile_gaussian_filter(model, extractor="greedy", rules="minimal", amortize_constants=am,
                                           objective="latency")
             assert lat.step.latency_cost <= tot.step.latency_cost
+
+
+@pytest.mark.parametrize("make,args", [(gaussian_vec, (2, 4)), (gaussian_vec, (8, 16)), (gaussian_blocks, (3, 2)),
+                                       (gaussian_coupled, (3, 2))])
+def test_generated_c_filter_matches_kalman(make, args, tmp_path):
+    # every operation (predict, update, products, Schur complements, conversions) appears in one of these
+    import ctypes
+    import subprocess
+
+    from egfg.gccodegen import generate_gaussian_c, output_size
+
+    model = make(*args)
+    prog = compile_gaussian_filter(model, rules="minimal", extractor="greedy", strategy="bfs", amortize_constants=True)
+    src = tmp_path / "f.c"
+    src.write_text(generate_gaussian_c(prog))
+    lib = tmp_path / "f.so"
+    subprocess.run(["gcc", "-O2", "-std=c11", "-shared", "-fPIC", str(src), "-o", str(lib), "-lm"], check=True)
+    c = ctypes.CDLL(str(lib))
+    P = ctypes.POINTER(ctypes.c_double)
+    arrays = lambda xs: (P * len(xs))(*[x.ctypes.data_as(P) for x in xs])  # noqa: E731
+    facs = model.initial + model.transition + model.observation
+    params = [np.ascontiguousarray(np.concatenate([a.ravel() for a in f.A] + [f.b, f.Q.ravel()])) for f in facs]
+    c.egfg_setup(arrays(params))
+    obs = gaussian_observations(model, 4)
+    out = np.zeros(output_size(model))
+    names = sorted(model.dims)
+    for t, (ys, ref) in enumerate(zip(obs, kalman_reference(model, obs))):
+        ys = [np.ascontiguousarray(y) for y in ys]
+        (c.egfg_head if t == 0 else c.egfg_step)(arrays(ys), out.ctypes.data_as(P))
+        k = 0
+        for n in names:
+            assert np.allclose(out[k:k + model.dims[n]], ref.mean[n])
+            k += model.dims[n]
+        for n in names:
+            d = model.dims[n]
+            assert np.allclose(out[k:k + d * d].reshape(d, d), ref.cov[n])
+            k += d * d
