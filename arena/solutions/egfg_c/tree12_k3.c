@@ -1,5 +1,6 @@
-/* egfg program for tree12_k3 (cost model: 399 operations, overhead 0) */
+/* egfg program for tree12_k3 (cost model: 399 operations, overhead 512) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[3];
 static double t1[3];

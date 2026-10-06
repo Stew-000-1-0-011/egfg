@@ -1,5 +1,6 @@
-/* egfg program for cycle10_k4 (cost model: 2496 operations, overhead 512) */
+/* egfg program for cycle10_k4 (cost model: 2496 operations, overhead 64) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[64];
 static double t1[16];

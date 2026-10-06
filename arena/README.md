@@ -24,10 +24,10 @@ egfg が作る推定プログラムと、LLM が問題ごとに書いた推定�
 void infer(const double *const *tables, double *out);
 ```
 
-- 採点では、両側とも `gcc -O3 -march=native -std=c11 -shared -fPIC` でコンパイルする。
+- 採点では、両側とも `gcc -O3 -march=native -std=c11 -ffp-contract=fast -shared -fPIC` でコンパイルする（積和の融合は両側で有効）。GCC のベクトル拡張は使ってよい。
 - 使えるヘッダは math.h、string.h、stddef.h、stdint.h、stdlib.h、float.h だけ。スレッド（OpenMP、pthread）とインラインアセンブリは禁止。
 - 静的な配列（作業領域）は使ってよい。表の値に依存する計算はすべて `infer` の中で行う。
-- 時間は、何千回も呼んだ平均を 7 組とった中央値（1 回あたり）。
+- 時間は、C の中のループで何千回も呼んだ平均を 7 組とった中央値（1 回あたり）。Python から C への呼び出しの手間は、多数回の呼び出しで薄める。
 
 ## 以前の約束（Python、参考）
 

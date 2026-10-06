@@ -1,5 +1,6 @@
 /* egfg program for sparse10_k3 (cost model: 723 operations, overhead 0) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[3];
 static double t1[3];

@@ -1,5 +1,6 @@
 /* egfg program for star6_k4 (cost model: 284 operations, overhead 0) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[4];
 static double t1[4];

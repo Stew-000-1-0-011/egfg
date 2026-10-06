@@ -1,5 +1,6 @@
-/* egfg program for sparse8_k2 (cost model: 254 operations, overhead 512) */
+/* egfg program for sparse8_k2 (cost model: 254 operations, overhead 64) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[8];
 static double t1[4];

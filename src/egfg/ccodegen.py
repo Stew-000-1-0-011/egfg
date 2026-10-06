@@ -45,7 +45,78 @@ def _topo(dag: Dag) -> list[str]:
     return out
 
 
-def generate_c(dag: Dag, fg: FactorGraph) -> str:
+_SOLVE = """
+/* Solve W X = B in place (W: r x r, B: r x n, row-major) by Gauss-Jordan with partial pivoting. */
+static void egfg_solve(int r, double *W, double *B, int n) {
+    for (int c = 0; c < r; c++) {
+        int p = c;
+        for (int i = c + 1; i < r; i++)
+            if (fabs(W[i * r + c]) > fabs(W[p * r + c])) p = i;
+        if (p != c) {
+            for (int j = 0; j < r; j++) { double t = W[c * r + j]; W[c * r + j] = W[p * r + j]; W[p * r + j] = t; }
+            for (int j = 0; j < n; j++) { double t = B[c * n + j]; B[c * n + j] = B[p * n + j]; B[p * n + j] = t; }
+        }
+        double inv = 1.0 / W[c * r + c];
+        for (int j = 0; j < r; j++) W[c * r + j] *= inv;
+        for (int j = 0; j < n; j++) B[c * n + j] *= inv;
+        for (int i = 0; i < r; i++) {
+            if (i == c) continue;
+            double f = W[i * r + c];
+            if (f == 0.0) continue;
+            for (int j = 0; j < r; j++) W[i * r + j] -= f * W[c * r + j];
+            for (int j = 0; j < n; j++) B[i * n + j] -= f * B[c * n + j];
+        }
+    }
+}
+"""
+
+
+def _split_c(sp, original: FactorGraph) -> tuple[list[str], list[str]]:
+    """Declarations and code that build U (= chosen columns) and V (= W^-1 R) of a low-rank split.
+
+    The table is viewed as a matrix M (left variables x right variables, row-major); the first
+    r rows and columns are used (W = M[:r, :r]): exact when M has rank r and W is invertible.
+    """
+    f = original.factor(sp.fid)
+    perm = [f.scope.index(v) for v in sp.left + sp.right]
+    rows = 1
+    for v in sp.left:
+        rows *= original.cards[v]
+    cols = 1
+    for v in sp.right:
+        cols *= original.cards[v]
+    r = sp.rank
+    # element M[i][j] of the permuted matrix, read from the table in its own layout
+    st = _strides(list(f.scope), original.cards)
+    lvars, rvars = list(sp.left), list(sp.right)
+
+    def offset(vars_, idx_name):
+        # decompose a flat index over vars_ (row-major) into the table offset
+        parts, div = [], 1
+        for v in reversed(vars_):
+            parts.append(f"(({idx_name} / {div}) % {original.cards[v]}) * {st[v]}")
+            div *= original.cards[v]
+        return " + ".join(parts)
+
+    u, v = f"lrU{sp.u}", f"lrV{sp.v}"
+    decls = [f"static double {u}[{rows * r}];", f"static double {v}[{r * cols}];", f"static double lrW{sp.u}[{r * r}];"]
+    t = f"tables[{sp.fid}]"
+    code = [
+        f"    for (int i = 0; i < {rows}; i++) for (int a = 0; a < {r}; a++) "
+        f"{u}[i * {r} + a] = {t}[{offset(lvars, 'i')} + {offset(rvars, 'a')}];",
+        f"    for (int a = 0; a < {r}; a++) for (int j = 0; j < {cols}; j++) "
+        f"{v}[a * {cols} + j] = {t}[{offset(lvars, 'a')} + {offset(rvars, 'j')}];",
+        f"    for (int a = 0; a < {r}; a++) for (int b = 0; b < {r}; b++) "
+        f"lrW{sp.u}[a * {r} + b] = {t}[{offset(lvars, 'a')} + {offset(rvars, 'b')}];",
+        f"    egfg_solve({r}, lrW{sp.u}, {v}, {cols});",
+    ]
+    return decls, code
+
+
+def generate_c(dag: Dag, fg: FactorGraph, original: FactorGraph | None = None, structured=None) -> str:
+    """C source. `fg` is the graph the Dag refers to (the extended graph for low-rank results),
+    `original` the problem's graph, `structured` the low-rank splits used (if any)."""
+    original = original or fg
     cards = fg.cards
     scopes = dag_scopes(dag, fg)
     order = _topo(dag)
@@ -93,14 +164,27 @@ def generate_c(dag: Dag, fg: FactorGraph) -> str:
                 break
             cur = ch
             chain.append(cur)
-        if dag.nodes[cur].op == "mul" and cur != nid:
+        if cur == nid:
+            continue
+        if dag.nodes[cur].op == "mul":
+            # sums down to a product used only here: one loop nest over the product's operands
             skip.update(chain[1:])
             fused[nid] = tuple(dag.nodes[cur].children)
-        elif cur != nid and len(chain) > 1:
-            # a chain of sums over something shared: fold the chain into one reduction
+        elif dag.nodes[cur].op == "sum":
+            # stopped above a shared child: fold the whole chain into one reduction of that child
             skip.update(chain[1:])
-            fused[nid] = (chain[-1],)
+            fused[nid] = (dag.nodes[cur].children[0],)
+        else:
+            # sums down to a leaf: reduce the leaf directly (the leaf itself is read, not skipped)
+            skip.update(chain[1:-1])
+            fused[nid] = (cur,)
 
+    split_of = {}
+    if structured is not None:
+        for sp in structured.splits:
+            split_of[sp.u] = sp
+            split_of[sp.v] = sp
+    built = set()
     k = 0
     for nid in order:
         if nid in skip:
@@ -108,7 +192,17 @@ def generate_c(dag: Dag, fg: FactorGraph) -> str:
         node = dag.nodes[nid]
         if node.op == "leaf":
             f = fg.factor(node.arg)
-            access[nid] = (f"tables[{node.arg}]", _strides(list(f.scope), cards))
+            if node.arg in split_of:
+                sp = split_of[node.arg]
+                if sp.u not in built:
+                    d, c = _split_c(sp, original)
+                    decls += d
+                    body += c
+                    built.add(sp.u)
+                arr = f"lrU{sp.u}" if node.arg == sp.u else f"lrV{sp.v}"
+                access[nid] = (arr, _strides(list(f.scope), cards))
+            else:
+                access[nid] = (f"tables[{node.arg}]", _strides(list(f.scope), cards))
             continue
         if node.op == "input":
             raise ValueError("input leaves cannot be compiled to C")
@@ -129,7 +223,10 @@ def generate_c(dag: Dag, fg: FactorGraph) -> str:
     # outputs: marginals in sorted variable order, sharing the normalizer
     roots = sorted(dag.roots.items())
     first = roots[0][1]
-    lines = ["#include <stddef.h>", "", *decls, "", "void infer(const double *const *tables, double *out) {", *body]
+    head = ["#include <stddef.h>", "#include <math.h>", ""]
+    if built:
+        head.append(_SOLVE)
+    lines = [*head, *decls, "", "void infer(const double *const *tables, double *out) {", *body]
     v0 = scopes[first]
     n0 = size(sorted(v0))
     base0, _ = access[first]
@@ -147,12 +244,24 @@ def generate_c(dag: Dag, fg: FactorGraph) -> str:
 
 
 def generate_c_for(fg: FactorGraph, res) -> str:
-    if res.eval_fg is not None and res.sum_product_only:
-        raise ValueError("C generation does not support low-rank results yet")
+    if res.structured is not None:
+        return generate_c(res.extraction.dag, res.eval_fg, fg, res.structured)
     return generate_c(res.extraction.dag, fg)
 
 
-CFLAGS = ["-O3", "-march=native", "-std=c11", "-shared", "-fPIC"]
+CFLAGS = ["-O3", "-march=native", "-std=c11", "-ffp-contract=fast", "-shared", "-fPIC"]
+
+# A separate translation unit that calls `infer` n times natively, so that timing is not
+# dominated by the cost of one ctypes call (about 0.3-0.5 us, more than many programs take).
+_BENCH = """
+void infer(const double *const *tables, double *out);
+void egfg_bench(const double *const *tables, double *out, long n) {
+    for (long k = 0; k < n; k++) {
+        infer(tables, out);
+        __asm__ __volatile__("" ::: "memory");
+    }
+}
+"""
 
 
 def compile_c_program(source: str, variables: list[str], cards: dict[str, int], workdir=None):
@@ -168,12 +277,16 @@ def compile_c_program(source: str, variables: list[str], cards: dict[str, int], 
     d = Path(workdir or tempfile.mkdtemp(prefix="egfg_c_"))
     d.mkdir(parents=True, exist_ok=True)
     src = d / "prog.c"
+    bench = d / "bench.c"
     lib = d / "prog.so"
     src.write_text(source)
-    subprocess.run(["gcc", *CFLAGS, "-o", str(lib), str(src), "-lm"], check=True, capture_output=True)
+    bench.write_text(_BENCH)
+    subprocess.run(["gcc", *CFLAGS, "-o", str(lib), str(src), str(bench), "-lm"], check=True, capture_output=True)
     so = ctypes.CDLL(str(lib))
     so.infer.restype = None
     so.infer.argtypes = [ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.POINTER(ctypes.c_double)]
+    so.egfg_bench.restype = None
+    so.egfg_bench.argtypes = so.infer.argtypes + [ctypes.c_long]
     names = sorted(variables)
     total = sum(cards[v] for v in names)
 

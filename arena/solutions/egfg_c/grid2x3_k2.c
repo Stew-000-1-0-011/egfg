@@ -1,5 +1,6 @@
 /* egfg program for grid2x3_k2 (cost model: 168 operations, overhead 64) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[8];
 static double t1[4];

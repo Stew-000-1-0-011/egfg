@@ -1,5 +1,6 @@
-/* egfg program for tree9_k4 (cost model: 492 operations, overhead 0) */
+/* egfg program for tree9_k4 (cost model: 492 operations, overhead 512) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[4];
 static double t1[4];

@@ -129,3 +129,31 @@ def test_c_source_check():
     assert check_c_source("#include <math.h>\nvoid infer(){}") is None
     assert check_c_source("#include <stdio.h>\n") == "includes stdio.h"
     assert check_c_source("#pragma omp parallel\n") == "uses threads"
+
+
+def test_c_sum_chains_over_shared_nodes():
+    # every marginal is a chain of two sums over the same shared product: each chain must be
+    # folded into one reduction of that product (all marginals come from one joint, as required)
+    from egfg.ccodegen import generate_c
+    from egfg.ir import Leaf, Mul, Sum, to_dag
+    from egfg.model import Factor, FactorGraph
+
+    rng = np.random.default_rng(0)
+    t0, t1 = rng.uniform(0.1, 1, (2, 3, 2)), rng.uniform(0.1, 1, 3)
+    fg = FactorGraph({"a": 2, "b": 3, "c": 2}, [Factor(0, ("a", "b", "c"), t0), Factor(1, ("b",), t1)])
+    x = Mul(Leaf(0), Leaf(1))
+    terms = {"a": Sum("b", Sum("c", x)), "b": Sum("a", Sum("c", x)), "c": Sum("a", Sum("b", x))}
+    run = compile_c_program(generate_c(to_dag(terms), fg), ["a", "b", "c"], fg.cards)
+    out = run({0: t0, 1: t1})
+    joint = t0 * t1[None, :, None]
+    for v, ax in (("a", (1, 2)), ("b", (0, 2)), ("c", (0, 1))):
+        assert np.allclose(out[v], joint.sum(ax) / joint.sum())
+
+
+def test_c_low_rank_holdout_chain():
+    p = next(q for q in holdout_problems(7) if q["name"].startswith("holdout_lowrank_chain"))
+    src, _ = egfg_c_program(p, overheads=(0,))
+    run = compile_c_program(src, list(p["variables"]), p["variables"])
+    tables = draw_tables(p, 3)
+    out, ref = run(tables), reference_marginals(p, tables)
+    assert all(np.allclose(out[v], ref[v], atol=1e-9) for v in ref)

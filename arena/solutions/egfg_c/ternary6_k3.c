@@ -1,5 +1,6 @@
 /* egfg program for ternary6_k3 (cost model: 450 operations, overhead 0) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[9];
 static double t1[9];

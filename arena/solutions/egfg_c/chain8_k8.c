@@ -1,5 +1,6 @@
-/* egfg program for chain8_k8 (cost model: 1936 operations, overhead 0) */
+/* egfg program for chain8_k8 (cost model: 1936 operations, overhead 64) */
 #include <stddef.h>
+#include <math.h>
 
 static double t0[64];
 static double t1[8];

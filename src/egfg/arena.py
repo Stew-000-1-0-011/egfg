@@ -237,21 +237,21 @@ def check_c_source(source: str) -> str | None:
     return None
 
 
-def time_c(run, tables, repeats: int = 7, min_seconds: float = 0.002) -> float:
-    """Median over `repeats` of the mean time per call, each measured over enough calls."""
+def time_c(run, tables, repeats: int = 7, min_seconds: float = 0.005) -> float:
+    """Median over `repeats` of the mean time per call. The calls are made natively in a loop
+    (`egfg_bench`), so the cost of crossing from Python into C is spread over many calls."""
     import ctypes
     import statistics
     import time
 
     bufs, ptrs, out = run.prepare(tables)
     op = out.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-    f = run.lib.infer
-    f(ptrs, op)  # warm-up
-    n = 1
+    bench = run.lib.egfg_bench
+    bench(ptrs, op, 10)  # warm-up
+    n = 16
     while True:
         t0 = time.perf_counter()
-        for _ in range(n):
-            f(ptrs, op)
+        bench(ptrs, op, n)
         dt = time.perf_counter() - t0
         if dt >= min_seconds:
             break
@@ -259,8 +259,7 @@ def time_c(run, tables, repeats: int = 7, min_seconds: float = 0.002) -> float:
     samples = []
     for _ in range(repeats):
         t0 = time.perf_counter()
-        for _ in range(n):
-            f(ptrs, op)
+        bench(ptrs, op, n)
         samples.append((time.perf_counter() - t0) / n)
     return statistics.median(samples)
 
@@ -278,16 +277,20 @@ def egfg_c_program(problem: dict, sample_seed: int = 0, overheads=(0, 64, 512), 
     t0 = time.perf_counter()
     best = None
     tried = {}
-    for oh in overheads:
-        kw = dict(extractor="greedy", call_overhead=oh)
-        kw.update(optimize_kw)
-        res = optimize(fg, **kw)
-        src = generate_c_for(fg, res)
-        run = compile_c_program(src, fg.variables(), fg.cards)
-        t = time_c(run, tables, repeats=5)
-        tried[oh] = {"time_s": t, "flops": res.extraction.cost}
-        if best is None or t < best[0]:
-            best = (t, src, res, oh)
+    structures = [()]
+    if any(f["table"]["kind"] == "lowrank" for f in problem["factors"]):
+        structures.append(("lowrank",))
+    for st in structures:
+        for oh in overheads:
+            kw = dict(extractor="greedy", call_overhead=oh, structure=st)
+            kw.update(optimize_kw)
+            res = optimize(fg, **kw)
+            src = generate_c_for(fg, res)
+            run = compile_c_program(src, fg.variables(), fg.cards)
+            t = time_c(run, tables, repeats=5)
+            tried[f"{'+'.join(st) or 'plain'}/{oh}"] = {"time_s": t, "flops": res.extraction.cost}
+            if best is None or t < best[0]:
+                best = (t, src, res, oh)
     t, src, res, oh = best
     info = {"compile_s": round(time.perf_counter() - t0, 3), "flops": res.extraction.cost, "overhead": oh,
             "tried": tried, "egraph_nodes": res.num_nodes, "hit_limit": res.hit_limit}
