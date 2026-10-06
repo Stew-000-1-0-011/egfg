@@ -9,7 +9,7 @@ Two comparisons:
   shared_intermediates) and go through egfg's cost model and C code generation, like egfg's own
   plan and the best junction tree. Only the plan differs.
 - numpy: each tool as it is used from Python: egfg's generated numpy program, opt_einsum
-  (precompiled expressions, shared intermediates), and Funsor (numpy backend, sum_product).
+  (precompiled expressions, shared intermediates), and Funsor (numpy backend: sum_product built lazily, then its optimizer).
 """
 
 from __future__ import annotations
@@ -201,7 +201,9 @@ def funsor_numpy(problem, fg):
     from collections import OrderedDict
 
     import funsor
+    from funsor import interpretations
     from funsor.domains import Bint
+    from funsor.optimizer import apply_optimizer
     from funsor.sum_product import sum_product
 
     funsor.set_backend("numpy")
@@ -214,11 +216,15 @@ def funsor_numpy(problem, fg):
                    for i in ids]
 
         def infer():
+            # built lazily, then contracted by Funsor's optimizer (opt_einsum); memoize shares
+            # equal subexpressions across the marginals
             out = {}
-            for v in names:
-                m = sum_product(funsor.ops.add, funsor.ops.mul, factors, frozenset(names) - {v}, frozenset())
-                d = np.asarray(m.data)
-                out[v] = d / d.sum()
+            with interpretations.memoize():
+                for v in names:
+                    with interpretations.lazy:
+                        e = sum_product(funsor.ops.add, funsor.ops.mul, factors, frozenset(names) - {v}, frozenset())
+                    d = np.asarray(apply_optimizer(e).data)
+                    out[v] = d / d.sum()
             return out
 
         return infer
