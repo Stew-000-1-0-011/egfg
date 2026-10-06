@@ -6,7 +6,8 @@ Usage:
 GTSAM is built from source (the Python wheel has no headers), e.g. 4.3.0 with
 -DGTSAM_USE_BOOST_FEATURES=OFF -DGTSAM_BUILD_WITH_MARCH_NATIVE=ON, Release.
 Only inference is timed (the graph is built once); `time_s` gives all marginals,
-`eliminate_s` the multifrontal elimination alone. For the larger problems, which have no
+`eliminate_s` the multifrontal elimination alone, `eliminate_fixed_order_s` the same with
+the ordering computed beforehand. For the larger problems, which have no
 LLM programs, egfg's C program is generated here and timed the same way as in score.py.
 """
 
@@ -47,7 +48,8 @@ def build(prefix: Path, out: Path) -> Path:
     exe = out / "bench"
     subprocess.run(["g++", "-O3", "-march=native", "-std=c++17", str(HERE / "bench.cpp"), "-o", str(exe),
                     f"-I{prefix / 'include'}", f"-I{prefix / 'include' / 'gtsam' / '3rdparty' / 'Eigen'}",
-                    f"-L{prefix / 'lib'}", f"-Wl,-rpath,{prefix / 'lib'}", "-lgtsam"], check=True)
+                    f"-L{prefix / 'lib'}", "-Wl,--disable-new-dtags", f"-Wl,-rpath,{prefix / 'lib'}",
+                    "-lgtsam"], check=True)
     return exe
 
 

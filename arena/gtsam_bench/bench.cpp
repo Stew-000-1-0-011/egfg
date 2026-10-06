@@ -1,6 +1,7 @@
 // GTSAM (C++) on one discrete problem: all marginals of a prebuilt DiscreteFactorGraph.
 // Input (text, from run.py): n, cards[n], m, then per factor: arity, keys..., table (row-major in
-// scope order); then the reference marginals in variable order. Output: one JSON line.
+// scope order); then the reference marginals in variable order. Output: one JSON line with the time of
+// all marginals, of the elimination alone, and of the elimination with the ordering computed beforehand.
 #include <gtsam/discrete/DiscreteFactorGraph.h>
 #include <gtsam/discrete/DiscreteMarginals.h>
 
@@ -77,6 +78,9 @@ int main(int argc, char** argv) {
     for (auto& k : keys) sink += mg.marginalProbabilities(k)(0);
   });
   double t_elim = median_time([&] { sink += g.eliminateMultifrontal()->size(); });
-  std::printf("{\"max_abs_err\": %.3e, \"time_s\": %.6e, \"eliminate_s\": %.6e, \"sink\": %g}\n", err, t_all,
-              t_elim, sink > 0 ? 1.0 : 0.0);
+  // the ordering (COLAMD) computed once, as egfg fixes its plan at compile time
+  const Ordering ord = Ordering::Colamd(g);
+  double t_fixed = median_time([&] { sink += g.eliminateMultifrontal(ord)->size(); });
+  std::printf("{\"max_abs_err\": %.3e, \"time_s\": %.6e, \"eliminate_s\": %.6e, \"eliminate_fixed_order_s\": %.6e, "
+              "\"sink\": %g}\n", err, t_all, t_elim, t_fixed, sink > 0 ? 1.0 : 0.0);
 }
