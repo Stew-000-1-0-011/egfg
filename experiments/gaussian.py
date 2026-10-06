@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 SEARCH_LIMIT_S = 120
-ILP_LIMIT_S = 30
+ILP_LIMIT_S = 20
 T = 64
 
 

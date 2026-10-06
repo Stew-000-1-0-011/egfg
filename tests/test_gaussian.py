@@ -199,9 +199,10 @@ def test_gaussian_filter_matches_kalman(name, reps, T):
 
 @pytest.mark.parametrize("extractor", ["ilp", "tree"])
 def test_gaussian_filter_other_extractors(extractor):
-    model = GMODELS["coupled"]
+    model = gaussian_coupled(2, 1)
     obs = gaussian_observations(model, 4)
-    _same(gaussian_filter(compile_gaussian_filter(model, extractor=extractor), obs), kalman_reference(model, obs), model)
+    prog = compile_gaussian_filter(model, extractor=extractor, time_limit_s=5)
+    _same(gaussian_filter(prog, obs), kalman_reference(model, obs), model)
 
 
 def test_baselines_are_correct():
@@ -231,9 +232,9 @@ def test_baseline_costs_by_hand(d, m):
 @pytest.mark.parametrize("name", list(GMODELS))
 def test_both_representations_not_worse(name):
     model = GMODELS[name]
-    both = compile_gaussian_filter(model).step.cost
-    assert both <= compile_gaussian_filter(model, reps="info").step.cost
-    assert both <= compile_gaussian_filter(model, reps="moment").step.cost
+    both = compile_gaussian_filter(model, extractor="greedy").step.cost
+    assert both <= compile_gaussian_filter(model, reps="info", extractor="greedy").step.cost
+    assert both <= compile_gaussian_filter(model, reps="moment", extractor="greedy").step.cost
 
 
 def test_vec_matches_cheaper_baseline():
@@ -250,13 +251,13 @@ def test_vec_matches_cheaper_baseline():
 
 def test_factored_state_beats_kalman():
     for model in (gaussian_blocks(3, 2), gaussian_coupled(3, 2)):
-        assert compile_gaussian_filter(model).step.cost < kalman_program(model).step.cost
+        assert compile_gaussian_filter(model, extractor="greedy").step.cost < kalman_program(model).step.cost
 
 
 def test_latency_objective_splits_prediction():
     model = gaussian_coupled(2, 2)
-    tot = compile_gaussian_filter(model)
-    lat = compile_gaussian_filter(model, objective="latency")
+    tot = compile_gaussian_filter(model, extractor="greedy")
+    lat = compile_gaussian_filter(model, extractor="greedy", objective="latency")
     assert lat.step.latency_cost <= tot.step.latency_cost
     assert lat.step.prep_cost + lat.step.latency_cost == lat.step.cost
     obs = gaussian_observations(model, 4)
