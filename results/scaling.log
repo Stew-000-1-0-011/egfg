@@ -8,3 +8,13 @@ warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be remo
 [     11s] base         random_tree   n=6   seed=1 ok      wall=-               cost=171 jt=225 t=3.967
 [     23s] base         star          n=6   seed=0 ok      wall=-               cost=165 jt=252 t=22.004
 [     39s] base         chain         n=8   seed=0 ok      wall=-               cost=252 jt=333 t=34.674
+[    106s] base         star          n=8   seed=0 ok      wall=node_limit      cost=405 jt=423 t=81.358
+[    107s] base         cycle         n=4   seed=0 ok      wall=-               cost=252 jt=279 t=0.829
+[    115s] base         random_tree   n=8   seed=0 ok      wall=-               cost=249 jt=333 t=39.333
+[    115s] base         random_tree   n=8   seed=1 ok      wall=-               cost=246 jt=333 t=63.578
+[    168s] base         cycle         n=6   seed=0 ok      wall=-               cost=495 jt=621 t=60.247
+[    175s] base         chain         n=12  seed=0 ok      wall=time+node_limit cost=181089 jt=540 t=134.967
+[    177s] base         grid2         n=4   seed=0 ok      wall=-               cost=252 jt=279 t=0.719
+[    238s] base         grid2         n=6   seed=0 ok      wall=-               cost=513 jt=648 t=60.584
+[    240s] base         cycle         n=8   seed=0 ok      wall=-               cost=873 jt=963 t=71.782
+[    348s] base         grid2         n=8   seed=0 ok      wall=node_limit      cost=3906 jt=1017 t=109.039
