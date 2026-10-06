@@ -68,10 +68,15 @@ def class_leaves(g: EGraphData) -> dict[str, frozenset[int]]:
     return leaves
 
 
-def _costs(g: EGraphData, fg: FactorGraph, scopes, weights: Weights | None = None) -> dict[tuple[str, int], int]:
+def _costs(
+    g: EGraphData, fg: FactorGraph, scopes, weights: Weights | None = None, overhead: int = 0
+) -> dict[tuple[str, int], int]:
+    """Per node: weight × (operations + `overhead` per non-leaf node). The overhead models a
+    fixed cost per operation (a library call), which favours computations with fewer steps."""
     w = weights or {}
     return {
-        (cid, i): w.get(cid, 1) * node_cost(n, scopes[cid], [scopes[c] for c in n.children], fg)
+        (cid, i): w.get(cid, 1)
+        * (node_cost(n, scopes[cid], [scopes[c] for c in n.children], fg) + (overhead if n.children else 0))
         for cid, nodes in g.classes.items()
         for i, n in enumerate(nodes)
     }
@@ -90,18 +95,21 @@ def _reachable_classes(g: EGraphData) -> list[str]:
     return sorted(seen)
 
 
-def weighted_dag_cost(dag: Dag, fg: FactorGraph, weights: Weights) -> int:
-    """DAG cost with each node's cost multiplied by its weight (nodes are keyed by e-class)."""
+def weighted_dag_cost(dag: Dag, fg: FactorGraph, weights: Weights | None, overhead: int = 0) -> int:
+    """DAG cost with each node's cost (plus `overhead` per non-leaf) multiplied by its weight."""
     scopes = dag_scopes(dag, fg)
+    weights = weights or {}
     total = 0
     for nid in reachable(dag):
         n = dag.nodes[nid]
-        total += weights.get(nid, 1) * node_cost(n, scopes[nid], [scopes[c] for c in n.children], fg)
+        c = node_cost(n, scopes[nid], [scopes[c] for c in n.children], fg) + (overhead if n.children else 0)
+        total += weights.get(nid, 1) * c
     return total
 
 
 def _build(
-    g: EGraphData, fg: FactorGraph, choice: dict[str, ENode], optimal, start, weights: Weights | None = None
+    g: EGraphData, fg: FactorGraph, choice: dict[str, ENode], optimal, start, weights: Weights | None = None,
+    overhead: int = 0,
 ) -> Extraction:
     nodes: dict[str, ENode] = {}
     stack = list(g.roots.values())
@@ -113,7 +121,7 @@ def _build(
         stack.extend(choice[cid].children)
     dag = Dag(nodes, dict(g.roots), dict(g.inputs))
     cost = dag_cost(dag, fg)
-    wcost = cost if weights is None else weighted_dag_cost(dag, fg, weights)
+    wcost = cost if weights is None and not overhead else weighted_dag_cost(dag, fg, weights, overhead)
     return Extraction(dag, cost, optimal, time.perf_counter() - start, wcost)
 
 
@@ -134,10 +142,10 @@ def _tree_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, 
     return {cid: n for cid, (_, n) in best.items()}
 
 
-def extract_tree(g: EGraphData, fg: FactorGraph, weights: Weights | None = None) -> Extraction:
+def extract_tree(g: EGraphData, fg: FactorGraph, weights: Weights | None = None, overhead: int = 0) -> Extraction:
     start = time.perf_counter()
-    costs = _costs(g, fg, class_scopes(g, fg), weights)
-    return _build(g, fg, _tree_choice(g, costs), None, start, weights)
+    costs = _costs(g, fg, class_scopes(g, fg), weights, overhead)
+    return _build(g, fg, _tree_choice(g, costs), None, start, weights, overhead)
 
 
 def _start_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, ENode]:
@@ -190,7 +198,7 @@ def _reach_cost(roots, choice: dict[str, ENode], ncost: dict[tuple[str, ENode], 
 
 
 def extract_dag_greedy(
-    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None
+    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0
 ) -> Extraction:
     """Local search on the shared (DAG) cost, starting from the tree (or seed) choice.
 
@@ -199,7 +207,7 @@ def extract_dag_greedy(
     finds no improvement or time runs out.
     """
     start = time.perf_counter()
-    costs = _costs(g, fg, class_scopes(g, fg), weights)
+    costs = _costs(g, fg, class_scopes(g, fg), weights, overhead)
     ncost = _node_costs(g, costs)
     choice = _start_choice(g, costs)
     roots = list(dict.fromkeys(g.roots.values()))
@@ -221,7 +229,7 @@ def extract_dag_greedy(
                 if c is not None and c < current:
                     current, keep, improved = c, n, True
                 choice[cid] = keep
-    return _build(g, fg, choice, None, start, weights)
+    return _build(g, fg, choice, None, start, weights, overhead)
 
 
 def _reachable_under(roots, choice: dict[str, ENode]) -> list[str]:
@@ -239,12 +247,12 @@ def _reachable_under(roots, choice: dict[str, ENode]) -> list[str]:
 
 
 def extract_dag_ilp(
-    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None
+    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0
 ) -> Extraction:
     """Choose one node per needed e-class minimizing the shared (DAG) cost."""
     start = time.perf_counter()
     scopes = class_scopes(g, fg)
-    costs = _costs(g, fg, scopes, weights)
+    costs = _costs(g, fg, scopes, weights, overhead)
     cids = _reachable_classes(g)
     prob = pulp.LpProblem("dag_extraction", pulp.LpMinimize)
     x = {
@@ -264,7 +272,7 @@ def extract_dag_ilp(
     # The start choice (tree extraction, or the seed when cheaper) is acyclic and
     # always valid: it is the warm start for every solve and the fallback
     # whenever the solver runs out of time.
-    fallback = _build(g, fg, _start_choice(g, costs), None, start, weights)
+    fallback = _build(g, fg, _start_choice(g, costs), None, start, weights, overhead)
     warm = fallback.dag.nodes
 
     def set_warm_start() -> None:
@@ -299,7 +307,7 @@ def extract_dag_ilp(
             break
         prob += pulp.lpSum(x[(cid, picked[cid])] for cid in cycle) <= len(cycle) - 1
     choice = {cid: g.classes[cid][i] for cid, i in picked.items()}
-    result = _build(g, fg, choice, optimal, start, weights)
+    result = _build(g, fg, choice, optimal, start, weights, overhead)
     return result if result.weighted_cost <= fallback.weighted_cost else give_up()
 
 

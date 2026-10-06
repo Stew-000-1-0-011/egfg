@@ -1,0 +1,210 @@
+{
+ "seeds": [
+  202,
+  203,
+  204
+ ],
+ "problems": {
+  "chain15_k4": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 1.6653345369377348e-16,
+    "time_s": 0.00018488499972590944
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 2.220446049250313e-16,
+    "time_s": 5.363600030250382e-05
+   }
+  },
+  "chain8_k8": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 1.1102230246251565e-16,
+    "time_s": 7.540000024164328e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 1.1102230246251565e-16,
+    "time_s": 2.288699943164829e-05
+   }
+  },
+  "cycle10_k4": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 1.176836406102666e-14,
+    "time_s": 7.618099971296033e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 1.176836406102666e-14,
+    "time_s": 2.771299932646798e-05
+   }
+  },
+  "cycle8_k4": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 2.4980018054066022e-15,
+    "time_s": 5.397499990067445e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 2.3314683517128287e-15,
+    "time_s": 3.152599947497947e-05
+   }
+  },
+  "grid2x3_k2": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 2.220446049250313e-16,
+    "time_s": 3.5896000554203056e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 3.3306690738754696e-16,
+    "time_s": 1.6220000361499842e-05
+   }
+  },
+  "grid2x4_k3": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 6.106226635438361e-16,
+    "time_s": 4.669999998441199e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 6.661338147750939e-16,
+    "time_s": 2.58209993262426e-05
+   }
+  },
+  "lowrank_cycle6_k8_r1": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 1.6375789613221059e-15,
+    "time_s": 0.00021050199939054437
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 1.6653345369377348e-15,
+    "time_s": 1.2229999811097514e-05
+   }
+  },
+  "lowrank_cycle8_k12_r3": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 1.8041124150158794e-16,
+    "time_s": 0.0005527849998543388
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 8.326672684688674e-17,
+    "time_s": 2.3810999664419796e-05
+   }
+  },
+  "sparse10_k3": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 3.4416913763379853e-15,
+    "time_s": 7.602799996675458e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 3.3306690738754696e-15,
+    "time_s": 3.257999924244359e-05
+   }
+  },
+  "sparse8_k2": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 3.3306690738754696e-16,
+    "time_s": 9.656100064603379e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 3.3306690738754696e-16,
+    "time_s": 3.956399996241089e-05
+   }
+  },
+  "star6_k4": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 3.3306690738754696e-16,
+    "time_s": 3.1394999496114906e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 3.3306690738754696e-16,
+    "time_s": 1.0308000128134154e-05
+   }
+  },
+  "star7_k4": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 9.43689570931383e-16,
+    "time_s": 7.912999990367098e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 9.71445146547012e-16,
+    "time_s": 8.69999985297909e-06
+   }
+  },
+  "ternary6_k3": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 3.885780586188048e-16,
+    "time_s": 4.523700044956058e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 4.440892098500626e-16,
+    "time_s": 2.1576000108325388e-05
+   }
+  },
+  "ternary8_k3": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 9.43689570931383e-16,
+    "time_s": 6.682099956378806e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 9.43689570931383e-16,
+    "time_s": 3.676999949675519e-05
+   }
+  },
+  "tree12_k3": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 7.605027718682322e-15,
+    "time_s": 0.00013471200054482324
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 7.438494264988549e-15,
+    "time_s": 2.308999955857871e-05
+   }
+  },
+  "tree9_k4": {
+   "egfg": {
+    "status": "ok",
+    "max_abs_err": 5.495603971894525e-15,
+    "time_s": 5.6039999435597565e-05
+   },
+   "llm": {
+    "status": "ok",
+    "max_abs_err": 5.440092820663267e-15,
+    "time_s": 2.616600067995023e-05
+   }
+  }
+ },
+ "summary": {
+  "time_ratio_geomean": 3.5520062427535293,
+  "ratio": "egfg/llm",
+  "wins": {
+   "egfg": 0,
+   "llm": 16,
+   "tie": 0
+  }
+ }
+}

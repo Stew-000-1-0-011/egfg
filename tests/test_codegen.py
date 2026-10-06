@@ -98,3 +98,34 @@ def test_score_rejects_forbidden_imports_and_scores_programs(tmp_path):
                     "--problems", str(probs), "--out", str(out), "--seed", "3"], check=True, cwd=ROOT)
     res = json.loads(out.read_text())["problems"][p["name"]]
     assert res["good"]["status"] == "ok" and res["bad"]["status"] == "rejected"
+
+
+# --- C ------------------------------------------------------------------------
+
+from egfg.arena import check_c_source, egfg_c_program  # noqa: E402
+from egfg.ccodegen import compile_c_program, generate_c_for  # noqa: E402
+
+
+@pytest.mark.parametrize("fg", [chain(6, 3), star(6, 3), grid(2, 3, 3), random_sparse(8, 2, 1), cycle(5, 4)])
+def test_generated_c_matches_brute_force(fg):
+    res = optimize(fg, extractor="greedy")
+    run = compile_c_program(generate_c_for(fg, res), fg.variables(), fg.cards)
+    out = run({f.id: f.table for f in fg.factors})
+    bm = brute_force_marginals(fg)
+    assert all(np.allclose(out[v], bm[v]) for v in fg.variables())
+
+
+def test_generated_c_on_fresh_tables_and_ternary():
+    p = next(q for q in public_problems() if q["family"] == "ternary")
+    src, info = egfg_c_program(p, overheads=(0,))
+    run = compile_c_program(src, list(p["variables"]), p["variables"])
+    tables = draw_tables(p, 77)
+    out = run(tables)
+    ref = reference_marginals(p, tables)
+    assert all(np.allclose(out[v], ref[v], atol=1e-10) for v in ref)
+
+
+def test_c_source_check():
+    assert check_c_source("#include <math.h>\nvoid infer(){}") is None
+    assert check_c_source("#include <stdio.h>\n") == "includes stdio.h"
+    assert check_c_source("#pragma omp parallel\n") == "uses threads"

@@ -59,6 +59,8 @@ def worker(args: dict) -> dict:
     from egfg.arena import draw_tables, load, reference_marginals
 
     problem = load(args["problem"])
+    if args["program"].endswith(".c"):
+        return _worker_c(args, problem)
     spec = importlib.util.spec_from_file_location("solution", args["program"])
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -83,7 +85,38 @@ def worker(args: dict) -> dict:
     return {"status": "ok" if err <= TOL else "wrong", "max_abs_err": err, "time_s": statistics.median(times)}
 
 
+def _worker_c(args: dict, problem: dict) -> dict:
+    import numpy as np
+
+    from egfg.arena import draw_tables, reference_marginals, time_c
+    from egfg.ccodegen import compile_c_program
+
+    try:
+        run = compile_c_program(Path(args["program"]).read_text(), list(problem["variables"]), problem["variables"])
+    except Exception as e:  # compilation error
+        return {"status": "error", "detail": f"compile: {str(e)[:200]}"}
+    err, t = 0.0, None
+    for k, seed in enumerate(args["seeds"]):
+        tables = draw_tables(problem, seed)
+        out = run(tables)
+        if k == 0:
+            t = time_c(run, tables, repeats=N_TIMING)
+        ref = reference_marginals(problem, tables)
+        for v, r in ref.items():
+            err = max(err, float(np.max(np.abs(out[v] - r))))
+    if not np.isfinite(err):
+        return {"status": "wrong", "max_abs_err": float("nan")}
+    return {"status": "ok" if err <= TOL else "wrong", "max_abs_err": err, "time_s": t}
+
+
 def run(program: Path, problem: Path, seeds: list[int], check: bool) -> dict:
+    if check and program.suffix == ".c":
+        from egfg.arena import check_c_source
+
+        bad = check_c_source(program.read_text())
+        if bad:
+            return {"status": "rejected", "detail": bad}
+        check = False
     if check:
         bad = check_imports(program)
         if bad:
@@ -120,12 +153,12 @@ def main() -> None:
         row = {}
         for sol in args.solutions:
             d = Path(sol)
-            prog = d / f"{name}.py"
+            prog = d / f"{name}.c" if (d / f"{name}.c").exists() else d / f"{name}.py"
             label = d.name
-            row[label] = run(prog, prob, seeds, check=(label != "egfg")) if prog.exists() else {"status": "missing"}
+            row[label] = run(prog, prob, seeds, check=not label.startswith("egfg")) if prog.exists() else {"status": "missing"}
         results["problems"][name] = row
-        print(name, {k: (v["status"], round(v.get("time_s", float("nan")) * 1e3, 3)) for k, v in row.items()},
-              flush=True)
+        print(name, {k: (v["status"], round(v.get("time_s", float("nan")) * 1e6, 3)) for k, v in row.items()},
+              "(us)", flush=True)
     labels = [Path(s).name for s in args.solutions]
     if len(labels) == 2:
         a, b = labels

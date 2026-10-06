@@ -214,3 +214,82 @@ def egfg_program(problem: dict, sample_seed: int = 0, **optimize_kw) -> tuple[st
             "egraph_nodes": res.num_nodes, "hit_limit": res.hit_limit}
     header = f'"""egfg program for {problem["name"]} (cost model: {res.extraction.cost} operations)."""\n'
     return header + src, info
+
+
+# ---------------------------------------------------------------------------
+# C programs
+# ---------------------------------------------------------------------------
+
+C_ALLOWED_HEADERS = {"math.h", "string.h", "stddef.h", "stdint.h", "stdlib.h", "float.h"}
+
+
+def check_c_source(source: str) -> str | None:
+    """None if the C source only includes allowed headers and uses no threads/pragmas, else why not."""
+    import re
+
+    for m in re.finditer(r"#\s*include\s*[<\"]([^>\"]+)[>\"]", source):
+        if m.group(1) not in C_ALLOWED_HEADERS:
+            return f"includes {m.group(1)}"
+    if re.search(r"#\s*pragma\s+omp", source) or "pthread" in source:
+        return "uses threads"
+    if re.search(r"\b(asm|__asm__)\b", source):
+        return "uses inline assembly"
+    return None
+
+
+def time_c(run, tables, repeats: int = 7, min_seconds: float = 0.002) -> float:
+    """Median over `repeats` of the mean time per call, each measured over enough calls."""
+    import ctypes
+    import statistics
+    import time
+
+    bufs, ptrs, out = run.prepare(tables)
+    op = out.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+    f = run.lib.infer
+    f(ptrs, op)  # warm-up
+    n = 1
+    while True:
+        t0 = time.perf_counter()
+        for _ in range(n):
+            f(ptrs, op)
+        dt = time.perf_counter() - t0
+        if dt >= min_seconds:
+            break
+        n *= 4
+    samples = []
+    for _ in range(repeats):
+        t0 = time.perf_counter()
+        for _ in range(n):
+            f(ptrs, op)
+        samples.append((time.perf_counter() - t0) / n)
+    return statistics.median(samples)
+
+
+def egfg_c_program(problem: dict, sample_seed: int = 0, overheads=(0, 64, 512), **optimize_kw) -> tuple[str, dict]:
+    """Compile a problem to C with egfg. Several cost settings are tried (a fixed cost per
+    loop nest favours fewer, larger loops) and the fastest program on sample tables is kept."""
+    import time
+
+    from .ccodegen import compile_c_program, generate_c_for
+    from .pipeline import optimize
+
+    tables = draw_tables(problem, sample_seed)
+    fg = to_factor_graph(problem, tables)
+    t0 = time.perf_counter()
+    best = None
+    tried = {}
+    for oh in overheads:
+        kw = dict(extractor="greedy", call_overhead=oh)
+        kw.update(optimize_kw)
+        res = optimize(fg, **kw)
+        src = generate_c_for(fg, res)
+        run = compile_c_program(src, fg.variables(), fg.cards)
+        t = time_c(run, tables, repeats=5)
+        tried[oh] = {"time_s": t, "flops": res.extraction.cost}
+        if best is None or t < best[0]:
+            best = (t, src, res, oh)
+    t, src, res, oh = best
+    info = {"compile_s": round(time.perf_counter() - t0, 3), "flops": res.extraction.cost, "overhead": oh,
+            "tried": tried, "egraph_nodes": res.num_nodes, "hit_limit": res.hit_limit}
+    header = f"/* egfg program for {problem['name']} (cost model: {res.extraction.cost} operations, overhead {oh}) */\n"
+    return header + src, info
