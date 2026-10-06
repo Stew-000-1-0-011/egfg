@@ -56,6 +56,8 @@ class EGraphData:
     inputs: dict[str, frozenset[str]] = field(default_factory=dict)  # input name -> scope
     # e-class -> node of a seed term (the lowest one, so following these never cycles)
     seed: dict[str, ENode] = field(default_factory=dict)
+    # the same, for each seed set on its own (when several were given)
+    seed_sets: list[dict[str, ENode]] = field(default_factory=list)
 
 
 @dataclass
@@ -126,7 +128,7 @@ def _export(
     eg: EGraph,
     queries: dict[str, Term],
     inputs: dict[str, frozenset[str]],
-    seeds: dict[str, Term],
+    seeds: dict[str, Term] | list[dict[str, Term]],
 ) -> EGraphData:
     data = json.loads(eg._serialize(split_primitive_outputs=False).to_json())
     nodes = data["nodes"]
@@ -161,28 +163,72 @@ def _export(
 
     # For each e-class holding seed subterms, keep the seed node of least height:
     # its children then hold seed nodes of smaller height, so the choice is acyclic.
-    seed: dict[str, tuple[int, ENode]] = {}
-    heights: dict[Term, int] = {}
+    def lowest(terms) -> dict[str, ENode]:
+        seed: dict[str, tuple[int, ENode]] = {}
+        heights: dict[Term, int] = {}
 
-    def visit(t: Term) -> int:
-        if t not in heights:
-            kids = [] if isinstance(t, (Leaf, Input)) else [t.a] if isinstance(t, Sum) else [t.a, t.b]
-            h = 1 + max((visit(k) for k in kids), default=0)
-            en = key(t)
-            cid = index[en]
-            if cid not in seed or h < seed[cid][0]:
-                seed[cid] = (h, en)
-            heights[t] = h
-        return heights[t]
+        def visit(t: Term) -> int:
+            if t not in heights:
+                kids = [] if isinstance(t, (Leaf, Input)) else [t.a] if isinstance(t, Sum) else [t.a, t.b]
+                h = 1 + max((visit(k) for k in kids), default=0)
+                en = key(t)
+                cid = index[en]
+                if cid not in seed or h < seed[cid][0]:
+                    seed[cid] = (h, en)
+                heights[t] = h
+            return heights[t]
 
-    for t in seeds.values():
-        visit(t)
+        for t in terms:
+            visit(t)
+        return {cid: en for cid, (_, en) in seed.items()}
+
+    sets = seeds if isinstance(seeds, list) else [seeds]
+    sets = [st for st in sets if st]
     return EGraphData(
         classes,
         {name: find(t) for name, t in queries.items()},
         dict(inputs),
-        {cid: en for cid, (_, en) in seed.items()},
+        lowest([t for st in sets for t in st.values()]),
+        [lowest(st.values()) for st in sets] if len(sets) > 1 else [],
     )
+
+
+def rule_groups(rules: str) -> dict[str, list]:
+    """The rules of a rule set, grouped for staged schedules (same rules as `_rules`)."""
+    all_rules = _rules(rules)
+    scope_rules, rest = all_rules[:2], all_rules[2:]
+    n_assoc = 1 if rules == "minimal" else 2
+    reorder = rest[: 1 + n_assoc] + [rest[1 + n_assoc]]  # comm, assoc(s), sum swap
+    push = [rest[2 + n_assoc]]
+    pull = rest[3 + n_assoc :]
+    return {"scope": scope_rules, "push": push, "reorder": reorder, "pull": pull}
+
+
+def build_egraph(
+    fg: FactorGraph,
+    queries: dict[str, Term],
+    inputs: dict[str, frozenset[str]] | None = None,
+    seeds: dict[str, Term] | list[dict[str, Term]] | None = None,
+) -> EGraph:
+    """An e-graph holding the scopes of the leaves, the queries, and the seeds unioned with them."""
+    sets = seeds if isinstance(seeds, list) else [seeds or {}]
+    eg = EGraph()
+    for f in fg.factors:
+        s = Set[String].empty()
+        for v in f.scope:
+            s = s.insert(String(v))
+        eg.register(set_(scope(T.factor(f.id))).to(s))
+    for name, vs in (inputs or {}).items():
+        s = Set[String].empty()
+        for v in sorted(vs):
+            s = s.insert(String(v))
+        eg.register(set_(scope(T.input(name))).to(s))
+    for name, t in queries.items():
+        eg.register(_to_egglog(t))
+        for st in sets:
+            if name in st:
+                eg.register(union(_to_egglog(t)).with_(_to_egglog(st[name])))
+    return eg
 
 
 def saturate(
@@ -199,21 +245,7 @@ def saturate(
     start = time.perf_counter()
     inputs = dict(inputs or {})
     seeds = dict(seeds or {})
-    eg = EGraph()
-    for f in fg.factors:
-        s = Set[String].empty()
-        for v in f.scope:
-            s = s.insert(String(v))
-        eg.register(set_(scope(T.factor(f.id))).to(s))
-    for name, vs in inputs.items():
-        s = Set[String].empty()
-        for v in sorted(vs):
-            s = s.insert(String(v))
-        eg.register(set_(scope(T.input(name))).to(s))
-    for name, t in queries.items():
-        eg.register(_to_egglog(t))
-        if name in seeds:
-            eg.register(union(_to_egglog(t)).with_(_to_egglog(seeds[name])))
+    eg = build_egraph(fg, queries, inputs, seeds)
     eg.register(*_rules(rules))
 
     iterations, hit_limit = 0, False

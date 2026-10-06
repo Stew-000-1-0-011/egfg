@@ -23,6 +23,20 @@ def _adjacency(fg: FactorGraph) -> dict[str, set[str]]:
 
 
 def min_fill_order(fg: FactorGraph) -> list[str]:
+    return elimination_order(fg, "min_fill")
+
+
+ORDER_CRITERIA = ("min_fill", "min_degree", "min_weight")
+
+
+def elimination_order(fg: FactorGraph, criterion: str = "min_fill", rng=None) -> list[str]:
+    """Greedy elimination order. Ties break by name, or at random when `rng` is given.
+
+    min_fill: fewest new edges; min_degree: fewest neighbours; min_weight: smallest
+    table created (product of the cardinalities of the variable and its neighbours).
+    """
+    if criterion not in ORDER_CRITERIA:
+        raise ValueError(f"unknown criterion {criterion!r}")
     adj = _adjacency(fg)
     order: list[str] = []
     while adj:
@@ -30,7 +44,16 @@ def min_fill_order(fg: FactorGraph) -> list[str]:
             nb = sorted(adj[v])
             return sum(1 for i, x in enumerate(nb) for y in nb[i + 1 :] if y not in adj[x])
 
-        v = min(adj, key=lambda u: (fill(u), u))
+        def score(u: str):
+            if criterion == "min_fill":
+                return fill(u)
+            if criterion == "min_degree":
+                return len(adj[u])
+            return fg.size(adj[u] | {u})
+
+        best = min(score(u) for u in adj)
+        ties = sorted(u for u in adj if score(u) == best)
+        v = ties[0] if rng is None else ties[int(rng.integers(len(ties)))]
         nb = adj.pop(v)
         for x in nb:
             adj[x] |= nb - {x}
@@ -134,7 +157,11 @@ class TreeTerms:
         jt: JunctionTree,
         members: set[int] | None = None,
         external: dict[tuple[int, int], tuple[Input, frozenset[str]]] | None = None,
+        share_products: bool = False,
     ):
+        """With `share_products`, the products at a clique that leave out one neighbour
+        reuse prefix and suffix products of the neighbours' messages."""
+        self.share_products = share_products
         self.fg, self.jt = fg, jt
         self.members = set(range(len(jt.cliques))) if members is None else set(members)
         self.external = dict(external or {})
@@ -158,10 +185,37 @@ class TreeTerms:
                 parts.append(m)
         return parts
 
+    def _shared_product(self, i: int, exclude: int | None) -> Piece | None:
+        """factors · (prefix product of the messages before `exclude`) · (suffix product after it)."""
+        facs = [(Leaf(fid), frozenset(self.fg.factor(fid).scope), frozenset({fid})) for fid in self.jt.assigned[i]]
+        msgs: list[tuple[int, Piece | None]] = []
+        for k in self.jt.nbrs[i]:
+            if k == exclude:
+                msgs.append((k, None))  # only its position matters
+                continue
+            if k in self.members:
+                m = self.message(k, i)
+            elif (k, i) in self.external:
+                t, sc = self.external[(k, i)]
+                m = (t, sc, frozenset())
+            else:
+                m = None
+            if m is not None:
+                msgs.append((k, m))
+        if exclude is None:
+            return product(facs + [m for _, m in msgs])
+        pos = next((n for n, (k, _) in enumerate(msgs) if k == exclude), None)
+        before = [m for _, m in msgs[:pos]] if pos is not None else [m for _, m in msgs]
+        after = [m for _, m in msgs[pos + 1 :]] if pos is not None else []
+        before, after = [m for m in before if m is not None], [m for m in after if m is not None]
+        pre = product(before)  # left-to-right: the prefix products are shared between messages
+        suf = product(list(reversed(after)))  # right-to-left: the suffix products are shared too
+        return product(facs + [p for p in (pre, suf) if p is not None])
+
     def message(self, i: int, j: int) -> Piece | None:
         """Message from member clique i to its neighbour j (inside or outside `members`)."""
         if (i, j) not in self._msgs:
-            p = product(self._parts(i, exclude=j))
+            p = self._shared_product(i, j) if self.share_products else product(self._parts(i, exclude=j))
             self._msgs[(i, j)] = None if p is None else sum_out(p, self.jt.cliques[j])
         return self._msgs[(i, j)]
 

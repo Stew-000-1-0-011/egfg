@@ -68,10 +68,12 @@ def _sum_out(vars_: set[str], body: Term) -> Term:
     return body
 
 
-def junction_tree_terms(fg: FactorGraph, order: list[str] | None = None) -> tuple[dict[str, Term], list[MessageSig]]:
+def junction_tree_terms(
+    fg: FactorGraph, order: list[str] | None = None, share_products: bool = False
+) -> tuple[dict[str, Term], list[MessageSig]]:
     """Marginal terms of the junction tree, and the signature of every directed message."""
     jt = junction_tree(fg, order)
-    calc = TreeTerms(fg, jt)
+    calc = TreeTerms(fg, jt, share_products=share_products)
     terms = {v: calc.marginal(v)[0] for v in fg.variables()}
     sigs = []
     for i in jt.nbrs:
@@ -154,3 +156,35 @@ def factor_graph_bp_dag(fg: FactorGraph) -> tuple[Dag, list[MessageSig]]:
     terms = {v: _product([m(fid, v)[0] for fid in factors_of[v]]) for v in fg.variables()}
     sigs = [(ids, frozenset({x})) for (fid, x), (_, ids) in m_memo.items()]
     return to_dag(terms), sigs
+
+
+def candidate_orders(fg: FactorGraph, n_random: int = 4, seed: int = 0) -> list[list[str]]:
+    """min-fill, min-degree and min-weight orders, each with `n_random` random tie-breaks (deduplicated)."""
+    import numpy as np
+
+    from .jtree import ORDER_CRITERIA, elimination_order
+
+    out: list[list[str]] = []
+    for crit in ORDER_CRITERIA:
+        cands = [elimination_order(fg, crit)]
+        rng = np.random.default_rng(seed)
+        cands += [elimination_order(fg, crit, rng) for _ in range(n_random)]
+        for o in cands:
+            if o not in out:
+                out.append(o)
+    return out
+
+
+def best_junction_tree(fg: FactorGraph, share_products: bool = False, n_random: int = 4) -> tuple[Dag, int, list[str]]:
+    """The cheapest junction tree over the candidate orders (with share_products: over both
+    the plain and the prefix/suffix-shared products, so it is never worse than without)."""
+    from .cost import dag_cost
+
+    best = None
+    for order in candidate_orders(fg, n_random):
+        for share in ((False, True) if share_products else (False,)):
+            dag = to_dag(junction_tree_terms(fg, order, share)[0])
+            c = dag_cost(dag, fg)
+            if best is None or c < best[1]:
+                best = (dag, c, order)
+    return best

@@ -149,10 +149,16 @@ def _start_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str,
     tree = _tree_choice(g, costs)
     if not g.seed:
         return tree
-    seeded = {**tree, **g.seed}
     ncost = _node_costs(g, costs)
     roots = g.roots.values()
-    return seeded if _reach_cost(roots, seeded, ncost) <= _reach_cost(roots, tree, ncost) else tree
+    best, best_cost = tree, _reach_cost(roots, tree, ncost)
+    # all seeds together, then (when several seed sets were given) each one on its own
+    for sd in [g.seed] + list(g.seed_sets):
+        cand = {**tree, **sd}
+        c = _reach_cost(roots, cand, ncost)
+        if c is not None and c <= best_cost:
+            best, best_cost = cand, c
+    return best
 
 
 def _node_costs(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[tuple[str, ENode], int]:
