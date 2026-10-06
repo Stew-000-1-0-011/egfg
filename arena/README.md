@@ -60,3 +60,9 @@ def infer(tables: dict[int, numpy.ndarray]) -> dict[str, numpy.ndarray]:
 
 - **書く側（LLM）**：公開の問題ごとに、できるだけ速く正しいプログラムを書く。egfg のソース（`src/egfg/`）と egfg の解答（`arena/solutions/egfg/`）は読まない。
 - **改善する側（LLM）**：採点結果と書く側のプログラムを読み、egfg（規則、表現、探索、コード生成）を改善する。取り置きの問題の生成の中身や乱数の種に合わせ込まない。足した規則は、乱数での評価と総当たりとの一致で確かめる。
+
+## 既存のライブラリとの比較
+
+- Python から呼ぶ（正しさの確認と目安）：`uv run --group libs python arena/score_libs.py --seed <種> --against arena/results/<score.py の結果>.json --out arena/results/libs_seed<種>.json`。GTSAM（`DiscreteFactorGraph` と `DiscreteMarginals`）と pyAgrum（Shafer-Shenoy）。グラフは一度だけ作り、全変数の周辺分布を求める時間を測る。値にはバインディングの呼び出しの手間が含まれる。
+- C++ の GTSAM（公平な時間）：`uv run python arena/gtsam_bench/run.py --gtsam <GTSAM のインストール先> --seed <種> --against ... --out arena/results/gtsam_cpp_seed<種>.json`。GTSAM は自分でビルドする（pip の wheel にはヘッダがない）。公開の問題に加えて、大きめの問題（鎖 32 変数 K=32 など）でも、egfg の C と比べる。
+- 結果のまとめ：`arena/rounds/libs.md`。
