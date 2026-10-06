@@ -83,3 +83,57 @@ def random_sparse(n: int, K: int, seed: int = 0) -> FactorGraph:
     for k in rng.permutation(len(candidates))[: min(extra, len(candidates))]:
         edges.append(candidates[int(k)])
     return _pairwise(n, K, edges, seed)
+
+
+# ---------------------------------------------------------------------------
+# dynamic models (scopes use relative time: @-1 previous step, @0 current step)
+# ---------------------------------------------------------------------------
+
+
+def _table(rng, shape) -> np.ndarray:
+    return rng.uniform(0.1, 1.0, shape)
+
+
+def hmm(K: int, seed: int = 0):
+    from .dynamic import DynamicModel
+
+    rng = np.random.default_rng(seed + 30_000)
+    return DynamicModel(
+        {"a": K}, [(("a@0",), _table(rng, (K,)))], [(("a@-1", "a@0"), _table(rng, (K, K)))], [("a@0",)]
+    )
+
+
+def factorial_hmm(m: int, K: int, seed: int = 0):
+    """m independent chains; one observation factor over all chains."""
+    from .dynamic import DynamicModel
+
+    rng = np.random.default_rng(seed + 40_000)
+    xs = [f"x{i}" for i in range(m)]
+    return DynamicModel(
+        {x: K for x in xs},
+        [((f"{x}@0",), _table(rng, (K,))) for x in xs],
+        [((f"{x}@-1", f"{x}@0"), _table(rng, (K, K))) for x in xs],
+        [tuple(f"{x}@0" for x in xs)],
+    )
+
+
+def coupled_hmm(m: int, K: int, seed: int = 0):
+    """m chains; chain i also depends on chain i-1 at the previous step; one observation per chain."""
+    from .dynamic import DynamicModel
+
+    rng = np.random.default_rng(seed + 50_000)
+    xs = [f"x{i}" for i in range(m)]
+    trans = [((f"{xs[0]}@-1", f"{xs[0]}@0"), _table(rng, (K, K)))]
+    trans += [((f"{xs[i]}@-1", f"{xs[i - 1]}@-1", f"{xs[i]}@0"), _table(rng, (K, K, K))) for i in range(1, m)]
+    return DynamicModel(
+        {x: K for x in xs},
+        [((f"{x}@0",), _table(rng, (K,))) for x in xs],
+        trans,
+        [(f"{x}@0",) for x in xs],
+    )
+
+
+def random_observations(model, T: int, seed: int = 0) -> list[list[np.ndarray]]:
+    """Observation (likelihood) tables for T steps."""
+    rng = np.random.default_rng(seed + 60_000)
+    return [[_table(rng, model.obs_shape(k)) for k in range(len(model.observation))] for _ in range(T)]

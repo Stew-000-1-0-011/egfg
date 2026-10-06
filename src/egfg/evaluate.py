@@ -103,11 +103,20 @@ def value_feature(fg: FactorGraph, var: str, values: np.ndarray) -> dict[int, np
     return {f.id: np.broadcast_to(np.asarray(values, float).reshape(shape), f.table.shape).copy()}
 
 
-def evaluate(dag: Dag, fg: FactorGraph, semiring) -> tuple[dict[str, Table], int]:
-    """Evaluate each reachable node once (memoized); return root tables and the FLOP count."""
+def evaluate(
+    dag: Dag, fg: FactorGraph, semiring, inputs: dict[str, Table] | None = None
+) -> tuple[dict[str, Table], int]:
+    """Evaluate each reachable node once (memoized); return root tables and the FLOP count.
+
+    Input leaves take their value from `inputs` (already in the semiring's form);
+    an input leaf without a value is an error.
+    """
+    inputs = inputs or {}
     scopes = dag_scopes(dag, fg)
     order = reachable(dag)
-    unresolved = sorted({dag.nodes[nid].arg for nid in order if dag.nodes[nid].op == "input"})
+    unresolved = sorted(
+        {dag.nodes[nid].arg for nid in order if dag.nodes[nid].op == "input"} - set(inputs)
+    )
     if unresolved:
         raise ValueError(f"Dag still contains input leaves: {unresolved}")
     done: dict[str, Table] = {}
@@ -123,6 +132,8 @@ def evaluate(dag: Dag, fg: FactorGraph, semiring) -> tuple[dict[str, Table], int
                 continue
             if node.op == "leaf":
                 done[nid] = semiring.lift(fg.factor(node.arg))
+            elif node.op == "input":
+                done[nid] = inputs[node.arg]
             elif node.op == "mul":
                 done[nid] = semiring.mul(done[node.children[0]], done[node.children[1]])
             else:

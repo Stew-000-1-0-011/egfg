@@ -172,3 +172,13 @@ class TreeTerms:
         if p is None or v not in p[1]:
             raise ValueError(f"no factor or message mentions {v!r} at clique {i}")
         return sum_out(p, {v})
+
+    def joint(self, keep: frozenset[str] | set[str]) -> Piece:
+        """Unnormalized joint of `keep` at the lowest member clique containing all of it."""
+        cands = [i for i in self.members if set(keep) <= self.jt.cliques[i]]
+        if not cands:
+            raise ValueError(f"no clique contains all of {sorted(keep)}")
+        p = product(self._parts(min(cands), exclude=None))
+        if p is None:
+            raise ValueError(f"nothing to multiply at clique {min(cands)}")
+        return sum_out(p, keep)
