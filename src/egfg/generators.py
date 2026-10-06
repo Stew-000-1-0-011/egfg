@@ -137,3 +137,34 @@ def random_observations(model, T: int, seed: int = 0) -> list[list[np.ndarray]]:
     """Observation (likelihood) tables for T steps."""
     rng = np.random.default_rng(seed + 60_000)
     return [[_table(rng, model.obs_shape(k)) for k in range(len(model.observation))] for _ in range(T)]
+
+
+# ---------------------------------------------------------------------------
+# linear-Gaussian dynamic models
+# ---------------------------------------------------------------------------
+
+
+def gaussian_vec(d: int, m: int, seed: int = 0):
+    """One d-dimensional state x; one m-dimensional observation."""
+    from .dynamic_gaussian_models import vec
+
+    return vec(d, m, seed)
+
+
+def gaussian_blocks(k: int, b: int, seed: int = 0):
+    """k independent b-dimensional blocks; one b-dimensional observation of all of them."""
+    from .dynamic_gaussian_models import blocks
+
+    return blocks(k, b, seed)
+
+
+def gaussian_coupled(k: int, b: int, seed: int = 0):
+    """k b-dimensional blocks, block i driven by itself and block i-1; one observation per block."""
+    from .dynamic_gaussian_models import coupled
+
+    return coupled(k, b, seed)
+
+
+def gaussian_observations(model, T: int, seed: int = 0) -> list[list[np.ndarray]]:
+    rng = np.random.default_rng(seed + 70_000)
+    return [[rng.normal(size=len(f.b)) for f in model.observation] for _ in range(T)]
