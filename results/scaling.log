@@ -557,3 +557,14 @@ warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be remo
 [   4021s] precise      random_sparse n=12  seed=0 ok      wall=-               cost=1044 jt=1449 t=14.163
 [   4021s] precise      random_sparse n=12  seed=1 ok      wall=-               cost=1032 jt=1359 t=15.763
 [   4069s] precise      grid3         n=24  seed=0 ok      wall=-               cost=7254 jt=10071 t=60.776
+[   4121s] precise      random_sparse n=16  seed=0 ok      wall=-               cost=1980 jt=2727 t=69.648
+[   4121s] precise      random_sparse n=16  seed=1 ok      wall=-               cost=2172 jt=3051 t=28.342
+[   4140s] precise      grid3         n=33  seed=0 ok      wall=-               cost=10683 jt=14958 t=70.241
+[   4176s] precise      random_tree   n=32  seed=0 ok      wall=-               cost=1137 jt=1701 t=90.782
+[   4176s] precise      random_tree   n=32  seed=1 ok      wall=-               cost=1149 jt=1665 t=69.406
+[   4225s] precise      grid3         n=48  seed=0 ok      wall=-               cost=16326 jt=23058 t=84.818
+[   4314s] precise      grid3         n=63  seed=0 ok      wall=-               cost=22023 jt=31158 t=87.485
+[   4355s] precise      random_sparse n=24  seed=0 ok      wall=-               cost=3393 jt=5067 t=101.676
+[   4355s] precise      random_sparse n=24  seed=1 ok      wall=time            cost=3561 jt=5031 t=131.636
+[   4425s] precise      random_tree   n=48  seed=0 timeout wall=time            cost= jt= t=>120
+[   4425s] precise      random_tree   n=48  seed=1 ok      wall=-               cost=1749 jt=2538 t=97.794
