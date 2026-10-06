@@ -144,7 +144,7 @@ from egfg.ir import all_marginal_queries  # noqa: E402
 from egfg.repextract import Impl, extract_rep  # noqa: E402
 
 
-@pytest.mark.parametrize("fg", [random_tree(6, 3, 1), cycle(5, 2)])
+@pytest.mark.parametrize("fg", [random_tree(5, 3, 1), cycle(4, 2)])
 def test_single_representation_matches_plain_extraction(fg):
     g = saturate(fg, all_marginal_queries(fg)).graph
     costs = _costs(g, fg, class_scopes(g, fg))

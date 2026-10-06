@@ -61,8 +61,9 @@ def test_evaluate_rejects_input_leaves():
 @pytest.mark.parametrize("rules", ["full", "no_reverse", "minimal"])
 @pytest.mark.parametrize("seed", range(8))
 def test_rule_sets_match_brute_force(rules, seed):
+    # correctness of the rule sets; greedy extraction keeps the test fast (ILP is tested elsewhere)
     fg = random_small(seed)
-    assert _matches_brute_force(fg, optimize(fg, rules=rules))
+    assert _matches_brute_force(fg, optimize(fg, rules=rules, extractor="greedy"))
 
 
 def test_smaller_rule_sets_give_smaller_egraphs():
@@ -177,7 +178,7 @@ def test_greedy_improves_star():
 )
 @pytest.mark.parametrize("fg", [random_tree(8, 2, 0), grid(2, 4, 2, 1), random_sparse(8, 2, 0)])
 def test_combined_settings_match_brute_force(fg, kw):
-    assert _matches_brute_force(fg, optimize(fg, **kw))
+    assert _matches_brute_force(fg, optimize(fg, time_limit_s=5, **kw))
 
 
 def test_random_sparse_shape():

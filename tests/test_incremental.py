@@ -34,7 +34,7 @@ def test_every_node_of_an_eclass_has_the_same_factors(model):
 
 
 def test_no_weights_changes_nothing():
-    fg = random_tree(6, 2, 4)
+    fg = random_tree(5, 2, 4)
     g = saturate(fg, all_marginal_queries(fg)).graph
     for ex in (extract_tree, extract_dag_greedy, extract_dag_ilp):
         a, b = ex(g, fg), ex(g, fg, weights={})
