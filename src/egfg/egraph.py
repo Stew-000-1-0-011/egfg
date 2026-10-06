@@ -209,8 +209,10 @@ def build_egraph(
     queries: dict[str, Term],
     inputs: dict[str, frozenset[str]] | None = None,
     seeds: dict[str, Term] | list[dict[str, Term]] | None = None,
+    equalities: list[tuple[Term, Term]] | None = None,
 ) -> EGraph:
-    """An e-graph holding the scopes of the leaves, the queries, and the seeds unioned with them."""
+    """An e-graph holding the scopes of the leaves, the queries, the seeds unioned with
+    them, and extra known `equalities` (pairs of terms with the same value)."""
     sets = seeds if isinstance(seeds, list) else [seeds or {}]
     eg = EGraph()
     for f in fg.factors:
@@ -228,6 +230,8 @@ def build_egraph(
         for st in sets:
             if name in st:
                 eg.register(union(_to_egglog(t)).with_(_to_egglog(st[name])))
+    for a, b in equalities or []:
+        eg.register(union(_to_egglog(a)).with_(_to_egglog(b)))
     return eg
 
 
@@ -239,13 +243,14 @@ def saturate(
     rules: str = "full",
     inputs: dict[str, frozenset[str]] | None = None,
     seeds: dict[str, Term] | None = None,
+    equalities: list[tuple[Term, Term]] | None = None,
 ) -> SaturationResult:
     """Saturate the queries. `inputs` gives the scope of each Input leaf; `seeds`
     maps query names to known equivalent terms, which are unioned in up front."""
     start = time.perf_counter()
     inputs = dict(inputs or {})
     seeds = dict(seeds or {})
-    eg = build_egraph(fg, queries, inputs, seeds)
+    eg = build_egraph(fg, queries, inputs, seeds, equalities)
     eg.register(*_rules(rules))
 
     iterations, hit_limit = 0, False

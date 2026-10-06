@@ -23,6 +23,8 @@ class OptimizeResult:
     extraction: Extraction  # the stitched computation of all marginals
     clusters: list[frozenset[str]]  # variables of each cluster
     local_extractions: list[Extraction]
+    eval_fg: FactorGraph | None = None  # the graph to evaluate on when it differs from the input
+    sum_product_only: bool = False  # True when the computation relies on sum-only equalities
 
     @property
     def saturation(self) -> SaturationResult:
@@ -71,6 +73,7 @@ def optimize(
     seed: bool = False,
     time_limit_s: float = 60,
     strategy: str = "seeds+staged",
+    structure: tuple[str, ...] = (),
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
 
@@ -78,8 +81,13 @@ def optimize(
     reproduces phase 1. `cluster_budget` splits the junction tree
     into clusters of at most that many variables (larger cliques stay alone);
     `seed` unions the junction tree computation into each query first.
-    `time_limit_s` bounds each ILP / greedy extraction.
+    `time_limit_s` bounds each ILP / greedy extraction. `structure=("lowrank",)` adds
+    the low-rank factorizations of the tables as equalities (sum-product only: the
+    result can give marginals, not modes or moments).
     """
+    if structure:
+        return _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed,
+                                    time_limit_s, strategy, structure)
     jt = junction_tree(fg)
     problems = local_problems(fg, jt, clusters(jt, cluster_budget), seed)
     sats, exs = [], []
@@ -99,8 +107,40 @@ def optimize(
     return OptimizeResult(sats, ex, [p.variables for p in problems], exs)
 
 
+def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed, time_limit_s,
+                         strategy, structure) -> OptimizeResult:
+    from .baselines import junction_tree_terms
+    from .ir import all_marginal_queries
+    from .structure import low_rank
+
+    unknown = set(structure) - {"lowrank"}
+    if unknown:
+        raise ValueError(f"unknown structure {sorted(unknown)}")
+    if cluster_budget is not None:
+        raise ValueError("structure equalities are not combined with cluster_budget")
+    st = low_rank(fg)
+    queries = all_marginal_queries(fg)
+    seed_fgs = [fg] + ([st.replaced] if st.replaced is not None else [])
+    seeds = junction_tree_terms(fg)[0] if seed else None
+    sat, best = run_strategy(st.fg, queries, strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
+                             seeds=seeds, equalities=st.equalities, seed_fgs=seed_fgs)
+    ex = _extract(sat.graph, st.fg, extractor, time_limit_s)
+    if best is not None and best.cost < ex.cost:
+        ex = best
+    return OptimizeResult([sat], ex, [frozenset(fg.variables())], [ex], st.fg, bool(st.equalities))
+
+
+def _eval_fg(fg: FactorGraph, res: OptimizeResult) -> FactorGraph:
+    return res.eval_fg if res.eval_fg is not None else fg
+
+
+def _require_general(res: OptimizeResult, what: str) -> None:
+    if res.sum_product_only:
+        raise ValueError(f"{what} needs a computation valid in every semiring; this one uses sum-only equalities")
+
+
 def marginals(fg: FactorGraph, res: OptimizeResult) -> dict[str, np.ndarray]:
-    tables, _ = evaluate(res.extraction.dag, fg, SUM_PRODUCT)
+    tables, _ = evaluate(res.extraction.dag, _eval_fg(fg, res), SUM_PRODUCT)
     return {v: t.data / t.data.sum() for v, t in tables.items()}
 
 
@@ -136,6 +176,7 @@ def mode(fg: FactorGraph, res: OptimizeResult) -> dict[str, int]:
     maximizer even when several assignments tie, which independent per-variable
     argmaxes would not guarantee.
     """
+    _require_general(res, "mode")
     fixed: dict[str, int] = {}
     for v in fg.variables():
         tables, _ = evaluate(res.extraction.dag, fg, _Clamped(fixed))
@@ -145,6 +186,7 @@ def mode(fg: FactorGraph, res: OptimizeResult) -> dict[str, int]:
 
 def moments(fg: FactorGraph, res: OptimizeResult, var: str, values: np.ndarray) -> tuple[float, float]:
     """Mean and variance of values[x_var] under the normalized distribution."""
+    _require_general(res, "moments")
     sr = ExpectationSemiring(value_feature(fg, var, values))
     tables, _ = evaluate(res.extraction.dag, fg, sr)
     p, r, s = (float(tables[var].data[i].sum()) for i in range(3))

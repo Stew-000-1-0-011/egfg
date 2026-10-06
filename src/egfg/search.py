@@ -67,9 +67,14 @@ class SearchResult:
     best: Extraction | None = None  # restart keeps the best extraction over its rounds
 
 
-def jt_seed_sets(fg: FactorGraph, n_random: int = 4) -> list[dict[str, Term]]:
-    """Junction-tree terms for several elimination orders (one seed set per order)."""
-    return [junction_tree_terms(fg, order)[0] for order in candidate_orders(fg, n_random)]
+def jt_seed_sets(fg: FactorGraph, n_random: int = 4, names=None) -> list[dict[str, Term]]:
+    """Junction-tree terms for several elimination orders (one seed set per order),
+    restricted to the queries `names` (all variables by default)."""
+    out = []
+    for order in candidate_orders(fg, n_random):
+        terms = junction_tree_terms(fg, order)[0]
+        out.append({v: t for v, t in terms.items() if names is None or v in names})
+    return out
 
 
 def dag_to_terms(dag: Dag) -> dict[str, Term]:
@@ -109,7 +114,11 @@ def search(
     inputs: dict[str, frozenset[str]] | None = None,
     seeds: dict[str, Term] | None = None,
     trace: bool = False,
+    equalities: list[tuple[Term, Term]] | None = None,
+    seed_fgs: list[FactorGraph] | None = None,
 ) -> SearchResult:
+    """`equalities` are extra known equal pairs; `seed_fgs` are the graphs whose junction
+    trees seed the "seeds" strategies (the factor graph itself by default)."""
     cfg = config or SearchConfig()
     if cfg.strategy not in STRATEGIES:
         raise ValueError(f"unknown strategy {cfg.strategy!r}; expected one of {STRATEGIES}")
@@ -117,7 +126,8 @@ def search(
     seed_sets: list[dict[str, Term]] = [seeds] if seeds else []
     base = cfg.strategy
     if cfg.strategy.startswith("seeds"):
-        seed_sets += jt_seed_sets(fg, cfg.n_random_orders)
+        for sfg in seed_fgs or [fg]:
+            seed_sets += jt_seed_sets(sfg, cfg.n_random_orders, set(queries))
         base = cfg.strategy.split("+")[1] if "+" in cfg.strategy else "bfs"
     points: list[TracePoint] = []
 
@@ -131,9 +141,9 @@ def search(
         clock.paused += time.perf_counter() - t0
 
     if base == "restart":
-        return _restart(fg, queries, cfg, inputs, seed_sets, clock, trace, points)
+        return _restart(fg, queries, cfg, inputs, seed_sets, clock, trace, points, equalities)
 
-    eg = build_egraph(fg, queries, inputs, seed_sets)
+    eg = build_egraph(fg, queries, inputs, seed_sets, equalities)
     record(eg, 0)
     steps, hit = _grow(eg, base, cfg, clock, lambda s: record(eg, s), cfg.node_limit)
     g = _export(eg, queries, inputs or {}, seed_sets)
@@ -199,7 +209,7 @@ def _grow(eg, base: str, cfg: SearchConfig, clock: _Clock, after_step, node_limi
     raise ValueError(f"unknown schedule {base!r}")
 
 
-def _restart(fg, queries, cfg, inputs, seed_sets, clock, trace, points) -> SearchResult:
+def _restart(fg, queries, cfg, inputs, seed_sets, clock, trace, points, equalities=None) -> SearchResult:
     budget = max(1, int(cfg.node_limit * cfg.restart_fraction))
     current: list[dict[str, Term]] = list(seed_sets)
     best: Extraction | None = None
@@ -207,7 +217,7 @@ def _restart(fg, queries, cfg, inputs, seed_sets, clock, trace, points) -> Searc
     hit_any = False
     rounds = 0
     while rounds < cfg.max_steps and clock.now() < cfg.time_limit_s:
-        eg = build_egraph(fg, queries, inputs, current)
+        eg = build_egraph(fg, queries, inputs, current, equalities)
         _, hit = _grow(eg, "bfs", SearchConfig(rules=cfg.rules, max_steps=30, time_limit_s=cfg.time_limit_s),
                        clock, lambda s: None, budget)
         hit_any = hit_any or hit
@@ -255,6 +265,8 @@ def run_strategy(
     inputs: dict[str, frozenset[str]] | None = None,
     seeds: dict[str, Term] | None = None,
     time_limit_s: float = 120,
+    equalities: list[tuple[Term, Term]] | None = None,
+    seed_fgs: list[FactorGraph] | None = None,
 ):
     """Saturate with a strategy; returns (SaturationResult, best extraction found on the way or None).
 
@@ -269,8 +281,8 @@ def run_strategy(
         strategy = strategy.split("+")[1] if "+" in strategy else "bfs"
     if strategy == "bfs":
         return saturate(fg, queries, max_iters=max_iters, node_limit=node_limit, rules=rules,
-                        inputs=inputs, seeds=seeds), None
+                        inputs=inputs, seeds=seeds, equalities=equalities), None
     cfg = SearchConfig(strategy=strategy, rules=rules, node_limit=node_limit, max_steps=max_iters,
                        time_limit_s=time_limit_s)
-    res = search(fg, queries, cfg, inputs=inputs, seeds=seeds)
+    res = search(fg, queries, cfg, inputs=inputs, seeds=seeds, equalities=equalities, seed_fgs=seed_fgs)
     return SaturationResult(res.graph, res.steps, res.hit_limit, res.seconds, res.num_nodes), res.best

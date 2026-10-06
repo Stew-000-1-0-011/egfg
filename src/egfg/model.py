@@ -18,7 +18,9 @@ class Factor:
 
 
 class FactorGraph:
-    def __init__(self, cards: dict[str, int], factors: list[Factor]):
+    def __init__(self, cards: dict[str, int], factors: list[Factor], allow_negative: bool = False):
+        """`allow_negative` admits tables with negative entries (only for internal,
+        sum-product-only graphs such as low-rank factorizations)."""
         self.cards = dict(cards)
         self.factors = list(factors)
         self._by_id: dict[int, Factor] = {}
@@ -35,7 +37,7 @@ class FactorGraph:
             expected = tuple(self.cards[v] for v in f.scope)
             if tuple(f.table.shape) != expected:
                 raise ValueError(f"factor {f.id} has shape {f.table.shape}, expected {expected}")
-            if np.any(f.table < 0):
+            if not allow_negative and np.any(f.table < 0):
                 raise ValueError(f"factor {f.id} has negative entries")
             covered.update(f.scope)
         for v, k in self.cards.items():
