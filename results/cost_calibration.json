@@ -1,0 +1,34 @@
+{
+ "features": [
+  "flops_k",
+  "writes",
+  "strided",
+  "nests",
+  "loops",
+  "spill",
+  "const"
+ ],
+ "coef": {
+  "flops_k": 0.0669225987580326,
+  "writes": 0.0,
+  "strided": 0.014278716436520568,
+  "nests": 0.0,
+  "loops": 0.15446892820680672,
+  "spill": 0.7681844449399701,
+  "const": 0.0
+ },
+ "summary": {
+  "programs": 349,
+  "problems": 40,
+  "cv_median_rel_err": 0.27955874731620634,
+  "cv_p90_rel_err": 0.5970021397285931,
+  "pairs_cv_model": [
+   1133,
+   1273
+  ],
+  "pairs_flops": [
+   1111,
+   1273
+  ]
+ }
+}

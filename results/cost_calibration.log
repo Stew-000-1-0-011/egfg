@@ -1,0 +1,43 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+chain64_k4: 3 programs
+grid6x6_k2: 8 programs
+big_chain32_k32: 5 programs
+big_tree30_k8: 7 programs
+grid5x5_k2: 8 programs
+sparse20_k3: 7 programs
+coupled3_k3_t6: 8 programs
+factorial3_k3_t6: 8 programs
+big_cycle16_k16: 7 programs
+big_grid4x4_k3: 7 programs
+grid4x4_k3: 7 programs
+cycle16_k16: 7 programs
+chain16_k2: 4 programs
+chain16_k4: 4 programs
+chain16_k8: 4 programs
+chain16_k16: 4 programs
+chain16_k32: 4 programs
+chain15_k4: 6 programs
+tree12_k3: 7 programs
+cycle10_k4: 12 programs
+sparse10_k3: 14 programs
+tree9_k4: 7 programs
+grid3x3_k3: 13 programs
+grid3x3_k2: 13 programs
+grid3x3_k4: 13 programs
+grid3x3_k6: 13 programs
+chain8_k8: 8 programs
+cycle8_k4: 12 programs
+grid2x4_k3: 13 programs
+sparse8_k2: 13 programs
+ternary8_k3: 8 programs
+cycle8_k2: 12 programs
+cycle8_k8: 12 programs
+cycle8_k16: 12 programs
+star8_k4: 10 programs
+star8_k16: 10 programs
+star7_k4: 9 programs
+star6_k4: 9 programs
+grid2x3_k2: 11 programs
+ternary6_k3: 10 programs
+349 programs from 40 problems
+{"programs": 349, "problems": 40, "cv_median_rel_err": 0.27955874731620634, "cv_p90_rel_err": 0.5970021397285931, "pairs_cv_model": [1133, 1273], "pairs_flops": [1111, 1273]}
