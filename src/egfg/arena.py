@@ -280,7 +280,8 @@ def time_c(run, tables, repeats: int = 7, min_seconds: float = 0.005) -> float:
 
 def egfg_c_program(problem: dict, sample_seed: int = 0, overheads=(0, 64, 512), **optimize_kw) -> tuple[str, dict]:
     """Compile a problem to C with egfg. Several cost settings are tried (a fixed cost per
-    loop nest favours fewer, larger loops) and the fastest program on sample tables is kept."""
+    loop nest favours fewer, larger loops), each written as plain and as compact C, and the
+    fastest program on sample tables is kept."""
     import time
 
     from .ccodegen import compile_c_program, generate_c_for
@@ -299,12 +300,14 @@ def egfg_c_program(problem: dict, sample_seed: int = 0, overheads=(0, 64, 512), 
             kw = dict(extractor="greedy", call_overhead=oh, structure=st)
             kw.update(optimize_kw)
             res = optimize(fg, **kw)
-            src = generate_c_for(fg, res)
-            run = compile_c_program(src, fg.variables(), fg.cards)
-            t = time_c(run, tables, repeats=5)
-            tried[f"{'+'.join(st) or 'plain'}/{oh}"] = {"time_s": t, "flops": res.extraction.cost}
-            if best is None or t < best[0]:
-                best = (t, src, res, oh)
+            for compact in (False, True):  # the compact code (phase J) is faster on large problems
+                src = generate_c_for(fg, res, compact=compact)
+                run = compile_c_program(src, fg.variables(), fg.cards)
+                t = time_c(run, tables, repeats=5)
+                tried[f"{'+'.join(st) or 'plain'}/{oh}/{'compact' if compact else 'full'}"] = {
+                    "time_s": t, "flops": res.extraction.cost}
+                if best is None or t < best[0]:
+                    best = (t, src, res, oh)
     t, src, res, oh = best
     info = {"compile_s": round(time.perf_counter() - t0, 3), "flops": res.extraction.cost, "overhead": oh,
             "tried": tried, "egraph_nodes": res.num_nodes, "hit_limit": res.hit_limit}
