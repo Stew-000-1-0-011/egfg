@@ -33,7 +33,7 @@ def test_without_a_calibration_cost_c_is_the_operation_count(monkeypatch, tmp_pa
 
 def test_extraction_by_a_cost_model_is_exact(monkeypatch, tmp_path):
     p = tmp_path / "cal.json"
-    p.write_text(json.dumps({"coef": {"red": 1.0, "red_mul": 0.3, "mul": 0.2, "writes": 1.0, "strided": 0.3, "nests": 20.0,
+    p.write_text(json.dumps({"coef": {"red_3": 1.0, "red_mul": 0.3, "mul_3": 0.2, "writes": 1.0, "strided": 0.3, "nests": 20.0,
                                       "loops": 0.2, "spill": 0.0, "const": 30.0}}))
     monkeypatch.setenv("EGFG_COST_CALIBRATION", str(p))
     fg = grid(2, 3, 3)

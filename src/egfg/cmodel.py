@@ -5,15 +5,16 @@ The Dag is split into the loop nests the code generator writes (same rules: `_fu
 product of its operands), a product (one nest writing the product of two operands), and the
 output (normalizing the marginals). Per program the features are
 
-    red       Σ iterations of the summing nests (each adds to one accumulator: a dependency chain,
-              which gcc does not vectorize without -ffast-math)
+    red_T     Σ iterations of the summing nests whose innermost loop runs T times, by bucket
+              T = 2, 3, 4, 5-8, 9-16, 17+ (the time per iteration depends mostly on it: gcc
+              unrolls and vectorizes short constant loops of 4-8 well, 2-3 and long sums badly)
+    mul_T     the same for the product nests
     red_mul   Σ iterations × (operands − 1) of the summing nests (the multiplies before the add)
-    mul       Σ iterations of the product nests (independent elements: vectorized)
     writes    Σ elements written (size of each nest's output)
     strided   Σ iterations × operands read with a stride other than 0 or 1 in the innermost loop
     nests     number of nests
     loops     Σ over loops of the number of times the loop is entered
-    spill     elements of the intermediate tables beyond 256 KiB (a cache proxy)
+    spill     elements of the tables (factors and intermediates) beyond 2 MiB (the L2 cache)
     const     1 (the fixed cost of one call)
 
 and the predicted time (ns) is their dot product with non-negative coefficients fitted on
@@ -33,9 +34,16 @@ from .ccodegen import _fusion, _refs, _strides, _topo
 from .ir import Dag, ENode, dag_scopes
 from .model import FactorGraph
 
-FEATURES = ("red", "red_mul", "mul", "writes", "strided", "nests", "loops", "spill", "const")
-CACHE_ELEMENTS = 256 * 1024 // 8
+BUCKETS = ("2", "3", "4", "5_8", "9_16", "17+")
+FEATURES = (*(f"red_{b}" for b in BUCKETS), *(f"mul_{b}" for b in BUCKETS),
+            "red_mul", "writes", "strided", "nests", "loops", "spill", "const")
+CACHE_ELEMENTS = 2 * 1024 * 1024 // 8
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "results" / "cost_calibration.json"
+
+
+def _bucket(trips: int) -> str:
+    return "2" if trips <= 2 else "3" if trips == 3 else "4" if trips == 4 else "5_8" if trips <= 8 \
+        else "9_16" if trips <= 16 else "17+"
 
 
 def _size(vars_, cards) -> int:
@@ -72,11 +80,12 @@ def features(nodes: dict[str, ENode], roots: dict[str, str], scopes: dict[str, f
         inner = sorted(set().union(*(scopes[c] for c in operands)) - set(out)) if node.op == "sum" or nid in fused else []
         loops = out + inner
         n = _size(loops, cards)
+        b = _bucket(cards[loops[-1]] if loops else 1)
         if node.op == "sum":
-            f["red"] += n
+            f[f"red_{b}"] += n
             f["red_mul"] += n * (len(operands) - 1)
         else:
-            f["mul"] += n
+            f[f"mul_{b}"] += n
         w = _size(out, cards)
         f["writes"] += w
         inter += w
@@ -89,11 +98,14 @@ def features(nodes: dict[str, ENode], roots: dict[str, str], scopes: dict[str, f
     # a cluster, are tables already counted above)
     marg = sorted((v, nid) for v, nid in roots.items() if v in cards)
     if marg:
-        f["red"] += _size(scopes[marg[0][1]], cards)
-        f["mul"] += sum(cards[v] for v, _ in marg)
+        first = scopes[marg[0][1]]
+        f[f"red_{_bucket(_size(first, cards))}"] += _size(first, cards)
+        for v, _ in marg:
+            f[f"mul_{_bucket(cards[v])}"] += cards[v]
         f["writes"] += sum(cards[v] for v, _ in marg)
         f["nests"] += 1 + len(marg)
-    f["spill"] = max(0, inter - CACHE_ELEMENTS)
+    tables = sum(_size(fc.scope, cards) for fc in fg.factors)
+    f["spill"] = max(0, inter + tables - CACHE_ELEMENTS)
     return f
 
 
@@ -119,10 +131,8 @@ class CostModel:
         out = sorted(own)
         loops = out + (sorted(children[0] - own) if n.op == "sum" else [])
         f = dict.fromkeys(FEATURES, 0.0)
-        if n.op == "sum":
-            f["red"] = _size(loops, cards)
-        else:
-            f["mul"] = _size(loops, cards)
+        b = _bucket(cards[loops[-1]] if loops else 1)
+        f[f"{'red' if n.op == 'sum' else 'mul'}_{b}"] = _size(loops, cards)
         f["writes"] = _size(out, cards)
         f["nests"] = 1
         f["loops"] = sum(_size(loops[:d], cards) for d in range(len(loops)))

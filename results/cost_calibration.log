@@ -40,4 +40,4 @@ star6_k4: 9 programs
 grid2x3_k2: 11 programs
 ternary6_k3: 10 programs
 349 programs from 40 problems
-{"programs": 349, "problems": 40, "cv_median_rel_err": 0.27955874731620634, "cv_p90_rel_err": 0.5970021397285931, "pairs_cv_model": [1133, 1273], "pairs_flops": [1111, 1273]}
+{"programs": 349, "problems": 40, "cv_median_rel_err": 0.26332187789589545, "cv_p90_rel_err": 0.5837154458765098, "pairs_cv_model": [1151, 1284], "pairs_flops": [1130, 1284]}
