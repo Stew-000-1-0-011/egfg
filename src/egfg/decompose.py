@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .ir import Dag, ENode, Input, Leaf, Term
-from .jtree import JunctionTree, Piece, TreeTerms, product, sum_out
+from .jtree import JunctionTree, TreeTerms, product, sum_out
 from .model import FactorGraph
 
 
@@ -30,8 +30,10 @@ class LocalProblem:
     seeds: dict[str, Term]
 
 
-def message_name(c: int, j: int) -> str:
-    return f"msg:{c}>{j}"
+def message_name(i: int, k: int, piece: int | None = None) -> str:
+    """The message along the clique tree edge from clique i to clique k (named by cliques, not
+    clusters, so that a local problem keeps its name when other clusters change)."""
+    return f"msg:{i}>{k}" if piece is None else f"msg:{i}>{k}.{piece}"
 
 
 def clusters(jt: JunctionTree, budget: int | None) -> list[frozenset[int]]:
@@ -67,12 +69,20 @@ def clusters(jt: JunctionTree, budget: int | None) -> list[frozenset[int]]:
 
 
 def local_problems(
-    fg: FactorGraph, jt: JunctionTree, parts: list[frozenset[int]], seed: bool = False
+    fg: FactorGraph,
+    jt: JunctionTree,
+    parts: list[frozenset[int]],
+    seed: bool = False,
+    owner: dict[str, int] | None = None,
+    split: frozenset[tuple[int, int]] | set[tuple[int, int]] = frozenset(),
 ) -> list[LocalProblem]:
+    """`owner[v]` is a clique containing v whose cluster computes v's marginal (default: the
+    lowest cluster containing v). A message along a crossing edge (i, k) in `split` is sent as
+    several pieces, one per group of the sender's factors and incoming pieces linked by the
+    variables summed out (the product of the pieces is the message)."""
     of = {i: c for c, cl in enumerate(parts) for i in cl}
     cvars = [frozenset().union(*(jt.cliques[i] for i in cl)) for cl in parts]
     fids = [sorted(f for i in cl for f in jt.assigned[i]) for cl in parts]
-    fscope = [frozenset().union(*(fg.factor(f).scope for f in fs)) for fs in fids]
     crossing: dict[tuple[int, int], tuple[int, int]] = {}  # (c, j) -> (clique in c, clique in j)
     for i in range(len(jt.cliques)):
         for k in jt.nbrs[i]:
@@ -81,7 +91,13 @@ def local_problems(
     cnbrs = {c: sorted(j for (a, j) in crossing if a == c) for c in range(len(parts))}
     owned: dict[int, list[str]] = {c: [] for c in range(len(parts))}
     for v in fg.variables():
-        owned[min(c for c in range(len(parts)) if v in cvars[c])].append(v)
+        if owner is not None and v in owner:
+            c = of[owner[v]]
+            if v not in cvars[c]:
+                raise ValueError(f"owner clique {owner[v]} of {v!r} does not contain it")
+        else:
+            c = min(c for c in range(len(parts)) if v in cvars[c])
+        owned[c].append(v)
 
     side_memo: dict[tuple[int, int], bool] = {}
 
@@ -91,57 +107,99 @@ def local_problems(
             side_memo[(j, c)] = bool(owned[j]) or any(side_owns(k, j) for k in cnbrs[j] if k != c)
         return side_memo[(j, c)]
 
-    scope_memo: dict[tuple[int, int], frozenset[str] | None] = {}
+    # items of a cluster: its factors and the pieces of its incoming messages, as (term, scope)
+    def factor_items(c: int) -> list[tuple[Term, frozenset[str]]]:
+        return [(Leaf(f), frozenset(fg.factor(f).scope)) for f in fids[c]]
 
-    def msg_scope(c: int, j: int) -> frozenset[str] | None:
-        """Scope of the message c -> j, or None if it is the constant 1 (nothing to multiply)."""
-        if (c, j) not in scope_memo:
-            s, nonempty = set(fscope[c]), bool(fids[c])
+    pieces_memo: dict[tuple[int, int], list[tuple[str, frozenset[str], list[tuple[Term, frozenset[str]]]]]] = {}
+
+    def pieces(c: int, j: int) -> list[tuple[str, frozenset[str], list[tuple[Term, frozenset[str]]]]]:
+        """The pieces (name, scope, items multiplied) of the message c -> j; [] if it is the constant 1."""
+        if (c, j) not in pieces_memo:
+            items = factor_items(c)
             for k in cnbrs[c]:
-                if k != j and (sk := msg_scope(k, c)) is not None:
-                    s |= sk
-                    nonempty = True
-            scope_memo[(c, j)] = frozenset(s & cvars[j]) if nonempty else None
-        return scope_memo[(c, j)]
+                if k != j:
+                    items += [(Input(n), s) for n, s, _ in pieces(k, c)]
+            i, k = crossing[(c, j)]
+            if not items:
+                out = []
+            else:
+                groups = _components(items, cvars[j]) if (i, k) in split else []
+                if len(groups) > 1:
+                    out = [(message_name(i, k, n), s, g) for n, (s, g) in enumerate(groups)]
+                else:  # one table (also when splitting finds a single group)
+                    out = [(message_name(i, k), frozenset().union(*(s for _, s in items)) & cvars[j], items)]
+            pieces_memo[(c, j)] = out
+        return pieces_memo[(c, j)]
 
     def exists(c: int, j: int) -> bool:
-        return side_owns(j, c) and msg_scope(c, j) is not None
+        return side_owns(j, c) and bool(pieces(c, j))
+
+    def naive(items: list[tuple[Term, frozenset[str]]], keep: frozenset[str] | set[str]) -> Term:
+        return sum_out(product([(t, s, frozenset()) for t, s in items]), keep)[0]
 
     problems = []
     for c, cl in enumerate(parts):
-        inputs = {message_name(k, c): msg_scope(k, c) for k in cnbrs[c] if exists(k, c)}
-        pieces: list[tuple[str | None, Piece]] = [
-            (None, (Leaf(f), frozenset(fg.factor(f).scope), frozenset({f}))) for f in fids[c]
-        ] + [(name, (Input(name), s, frozenset())) for name, s in sorted(inputs.items())]
-
-        def naive(skip: str | None, keep: frozenset[str] | set[str]) -> Term:
-            p = product([pc for name, pc in pieces if name is None or name != skip])
-            return sum_out(p, keep)[0]
-
+        incoming = [(n, s) for k in cnbrs[c] if exists(k, c) for n, s, _ in pieces(k, c)]
+        inputs = dict(incoming)
         queries: dict[str, Term] = {}
         for j in cnbrs[c]:
             if exists(c, j):
-                queries[message_name(c, j)] = naive(message_name(j, c), cvars[c] & cvars[j])
+                for name, s, items in pieces(c, j):  # its incoming pieces all exist (j's side owns something)
+                    queries[name] = naive(items, s)
+        allitems = factor_items(c) + [(Input(n), s) for n, s in incoming]
         for v in owned[c]:
-            queries[v] = naive(None, {v})
+            queries[v] = naive(allitems, {v})
         if not queries:
             continue
         seeds: dict[str, Term] = {}
         if seed:
-            external = {
-                (k_clique, i_clique): (Input(message_name(k, c)), inputs[message_name(k, c)])
-                for k in cnbrs[c]
-                if message_name(k, c) in inputs
-                for (i_clique, k_clique) in [crossing[(c, k)]]
-            }
+            external = {}
+            for k in cnbrs[c]:
+                if exists(k, c):
+                    ps = [(Input(n), s, frozenset()) for n, s, _ in pieces(k, c)]
+                    t, s, _ = product(ps)
+                    i_clique, k_clique = crossing[(c, k)]
+                    external[(k_clique, i_clique)] = (t, s)
             calc = TreeTerms(fg, jt, set(cl), external)
             for j in cnbrs[c]:
-                if exists(c, j):
-                    seeds[message_name(c, j)] = calc.message(*crossing[(c, j)])[0]
+                if exists(c, j) and len(pieces(c, j)) == 1:
+                    seeds[pieces(c, j)[0][0]] = calc.message(*crossing[(c, j)])[0]
             for v in owned[c]:
                 seeds[v] = calc.marginal(v)[0]
         problems.append(LocalProblem(c, cl, cvars[c], owned[c], inputs, queries, seeds))
     return problems
+
+
+def _components(items: list[tuple[Term, frozenset[str]]], keep: frozenset[str]) -> list[tuple[frozenset[str], list]]:
+    """Group the items linked by variables not in `keep` (summed out); (kept scope, items) per group.
+    Groups whose kept scope is empty (constants) join the first other group."""
+    parent = list(range(len(items)))
+
+    def find(u: int) -> int:
+        while parent[u] != u:
+            parent[u] = parent[parent[u]]
+            u = parent[u]
+        return u
+
+    first: dict[str, int] = {}
+    for n, (_, s) in enumerate(items):
+        for x in sorted(s - keep):
+            if x in first:
+                parent[find(n)] = find(first[x])
+            else:
+                first[x] = n
+    groups: dict[int, list[int]] = {}
+    for n in range(len(items)):
+        groups.setdefault(find(n), []).append(n)
+    out = [(frozenset().union(*(items[n][1] for n in g)) & keep, [items[n] for n in g]) for g in groups.values()]
+    consts = [g for s, g in out if not s]
+    out = [(s, g) for s, g in out if s]
+    if not out:
+        return [(frozenset(), [it for g in consts for it in g])]
+    for g in consts:
+        out[0] = (out[0][0], out[0][1] + g)
+    return out
 
 
 def stitch(problems: list[LocalProblem], dags: list[Dag]) -> Dag:

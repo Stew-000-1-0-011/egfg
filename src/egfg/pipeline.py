@@ -26,6 +26,7 @@ class OptimizeResult:
     eval_fg: FactorGraph | None = None  # the graph to evaluate on when it differs from the input
     sum_product_only: bool = False  # True when the computation relies on sum-only equalities
     structured: object | None = None  # the structure.Structured used (low-rank splits), if any
+    partition: object | None = None  # partition.PartitionInfo when the partition was searched
 
     @property
     def saturation(self) -> SaturationResult:
@@ -81,6 +82,11 @@ def optimize(
     structure: tuple[str, ...] = (),
     call_overhead: int = 0,
     shape_penalty: float = 0.0,
+    partition: Literal["budget", "search"] = "budget",
+    partition_time_s: float = 120,
+    max_cluster_vars: int = 12,
+    exchange: bool = True,
+    boundary: bool = True,
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
 
@@ -93,10 +99,20 @@ def optimize(
     every operation in the extraction objective (fewer, larger steps run faster in numpy). `structure=("lowrank",)` adds
     the low-rank factorizations of the tables as equalities (sum-product only: the
     result can give marginals, not modes or moments).
+
+    `partition="search"` chooses the clusters by measured cost instead of `cluster_budget`
+    (see partition.py): merges, then `exchange` moves, then `boundary` choices (messages
+    sent as pieces, which cluster computes a marginal), within `partition_time_s` and at most
+    `max_cluster_vars` variables per cluster.
     """
     if structure:
         return _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed,
                                     time_limit_s, strategy, structure, call_overhead, shape_penalty)
+    if partition == "search":
+        return _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
+                                  shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary)
+    if partition != "budget":
+        raise ValueError(f"unknown partition {partition!r}")
     jt = junction_tree(fg)
     problems = local_problems(fg, jt, clusters(jt, cluster_budget), seed)
     sats, exs = [], []
@@ -114,6 +130,21 @@ def optimize(
     optimal = None if any(e.optimal is None for e in exs) else all(e.optimal for e in exs)
     ex = Extraction(dag, dag_cost(dag, fg), optimal, sum(e.seconds for e in exs))
     return OptimizeResult(sats, ex, [p.variables for p in problems], exs)
+
+
+def _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
+                       shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary) -> OptimizeResult:
+    from .partition import search_partition
+
+    solve_kw = dict(strategy=strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
+                    time_limit_s=time_limit_s)
+    extract = lambda g: _extract(g, fg, extractor, time_limit_s, overhead=call_overhead,  # noqa: E731
+                                 shape_penalty=shape_penalty)
+    dag, cur, info = search_partition(fg, solve_kw, extract, partition_time_s, max_cluster_vars, boundary, exchange)
+    exs = [s.extraction for s in cur.solved]
+    sats = [SaturationResult(None, 0, s.hit_limit, s.seconds, s.nodes) for s in cur.solved]
+    ex = Extraction(dag, dag_cost(dag, fg), None, sum(e.seconds for e in exs))
+    return OptimizeResult(sats, ex, [p.variables for p in cur.problems], exs, partition=info)
 
 
 def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed, time_limit_s,
