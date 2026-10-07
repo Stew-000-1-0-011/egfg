@@ -18,7 +18,7 @@ Search (first improvement, priority order, strictly decreasing cost, so it alway
 3. boundary (optional): sending a message as pieces, moving the marginal of a variable to
    another cluster containing it.
 
-With `jobs` > 1, the local problems of the next few candidates are solved in parallel first;
+With `jobs` > 1 (the default in `optimize` is one per CPU), the local problems of the next few candidates are solved in parallel first;
 the candidates are then taken in the same order, so the accepted moves are the same.
 """
 
@@ -123,10 +123,7 @@ class PartitionSearch:
         self.extract_kw = extract_kw
         self.max_vars = max_cluster_vars
         self.jobs = jobs
-        self.pool = None
-        if jobs > 1:
-            self.pool = ProcessPoolExecutor(jobs, mp_context=get_context("spawn"), initializer=_init_worker,
-                                            initargs=(fg, solve_kw, extract_kw))
+        self.pool = None  # started on the first batch worth solving in parallel
         self.memo: dict = {}
         self.tries = 0
         self.solves = 0
@@ -161,8 +158,11 @@ class PartitionSearch:
                 k = _key(p)
                 if k not in self.memo and k not in todo:
                     todo[k] = p
-        if self.pool is None or len(todo) < 2:
+        if self.jobs < 2 or len(todo) < 2:
             return
+        if self.pool is None:
+            self.pool = ProcessPoolExecutor(self.jobs, mp_context=get_context("spawn"), initializer=_init_worker,
+                                            initargs=(self.fg, self.solve_kw, self.extract_kw))
         for k, solved in zip(todo, self.pool.map(_solve_in_worker, todo.values())):
             self.solves += 1
             self.memo[k] = solved
@@ -256,7 +256,7 @@ class PartitionSearch:
                 max_accept: int | None = None):
         """First improvement in priority order until no move improves, the deadline, or
         `max_accept` accepted moves. With a pool, the candidates are prefetched in windows."""
-        window = 2 * self.jobs if self.pool is not None else 1
+        window = 2 * self.jobs if self.jobs > 1 else 1
         accepted = 0
         improved = True
         while improved and time.perf_counter() < deadline and (max_accept is None or accepted < max_accept):

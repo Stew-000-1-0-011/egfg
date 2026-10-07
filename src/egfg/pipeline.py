@@ -88,7 +88,7 @@ def optimize(
     exchange: bool = True,
     boundary: bool = True,
     partition_trees: str = "halving",
-    partition_jobs: int = 1,
+    partition_jobs: int | None = None,
     partition_moves: tuple[str, ...] | None = None,
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
@@ -107,7 +107,7 @@ def optimize(
     (see partition.py): merges, then `exchange` moves, then `boundary` choices (messages
     sent as pieces, which cluster computes a marginal), within `partition_time_s` and at most
     `max_cluster_vars` variables per cluster. `partition_trees` ("halving", "all", "first")
-    narrows the candidate clique trees, `partition_jobs` solves candidates in parallel and
+    narrows the candidate clique trees, `partition_jobs` processes solve candidates in parallel (default: one per CPU; 1 = none) and
     `partition_moves` sets the exchange moves (partition.EXCHANGE by default).
     """
     if structure:
@@ -141,7 +141,11 @@ def optimize(
 def _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
                        shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary, trees, jobs,
                        moves) -> OptimizeResult:
+    import os
+
     from .partition import EXCHANGE, search_partition
+
+    jobs = jobs if jobs is not None else (os.cpu_count() or 1)
 
     solve_kw = dict(strategy=strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
                     time_limit_s=time_limit_s)

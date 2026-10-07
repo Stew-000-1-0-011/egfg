@@ -59,6 +59,6 @@ def test_a_factorizing_message_is_sent_as_pieces():
 def test_parallel_search_accepts_the_same_moves():
     fg = grid(3, 3, 2)
     kw = dict(extractor="greedy", partition="search", partition_time_s=120)
-    one, two = optimize(fg, **kw), optimize(fg, partition_jobs=2, **kw)
+    one, two = optimize(fg, partition_jobs=1, **kw), optimize(fg, partition_jobs=2, **kw)
     assert one.partition.accepted and one.partition.accepted == two.partition.accepted
     assert one.extraction.cost == two.extraction.cost

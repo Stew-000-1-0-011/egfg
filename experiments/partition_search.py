@@ -58,7 +58,7 @@ def run_task(args) -> dict:
         res = optimize(fg, **kw)
     else:
         res = optimize(fg, partition="search", partition_time_s=limit, exchange=method != "merge",
-                       boundary=method == "boundary", **kw)
+                       boundary=method == "boundary", partition_jobs=1, **kw)  # already one problem per CPU
         info = res.partition
     secs = time.perf_counter() - t0
     if res is not None:
