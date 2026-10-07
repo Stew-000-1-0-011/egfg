@@ -41,6 +41,10 @@ def infer(tables: dict[int, numpy.ndarray]) -> dict[str, numpy.ndarray]:
 - 問題の JSON（構造と表の性質。例：`lowrank` なら rank）を見て書いてよい。表の値は実行時にしか渡されない。
 - 前処理（分解など）も `infer` の中で行う（時間に含まれる）。
 
+## 計算の結果の保存（任意）
+
+環境変数 `EGFG_CACHE` にディレクトリを指定すると、生成した C の共有ライブラリ（ソースのハッシュごと）と e-graph の飽和の結果（構造・設定・egfg のコードの版ごと）を保存して使い回す（`src/egfg/cache.py`）。種類ごとに最近の 200 件（`EGFG_CACHE_MAX`）だけ残す。既定では無効（テストは常に計算する）。
+
 ## 採点
 
 `uv run python arena/score.py --solutions arena/solutions/egfg_c arena/solutions/llm_c --out arena/results/<名前>.json`

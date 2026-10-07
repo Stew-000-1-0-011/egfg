@@ -264,9 +264,22 @@ void egfg_bench(const double *const *tables, double *out, long n) {
 """
 
 
+_GCC: str | None = None
+
+
+def _gcc_version() -> str:
+    global _GCC
+    if _GCC is None:
+        import subprocess
+
+        _GCC = subprocess.run(["gcc", "--version"], capture_output=True, text=True).stdout.splitlines()[0]
+    return _GCC
+
+
 def compile_c_program(source: str, variables: list[str], cards: dict[str, int], workdir=None):
     """Compile C source defining `infer` and return a Python wrapper
-    `run(tables: {factor id: array}) -> {variable: marginal}` (and the raw ctypes handle)."""
+    `run(tables: {factor id: array}) -> {variable: marginal}` (and the raw ctypes handle).
+    With `EGFG_CACHE` set, the shared library is kept by the hash of the source (see cache.py)."""
     import ctypes
     import subprocess
     import tempfile
@@ -274,14 +287,22 @@ def compile_c_program(source: str, variables: list[str], cards: dict[str, int], 
 
     import numpy as np
 
-    d = Path(workdir or tempfile.mkdtemp(prefix="egfg_c_"))
-    d.mkdir(parents=True, exist_ok=True)
-    src = d / "prog.c"
-    bench = d / "bench.c"
-    lib = d / "prog.so"
-    src.write_text(source)
-    bench.write_text(_BENCH)
-    subprocess.run(["gcc", *CFLAGS, "-o", str(lib), str(src), str(bench), "-lm"], check=True, capture_output=True)
+    from . import cache
+
+    k = cache.key("so", source, _BENCH, CFLAGS, _gcc_version())
+    lib = cache.path_for("so", k, ".so")
+    if lib is not None and lib.exists():
+        cache._touch(lib)
+    else:
+        d = Path(workdir or tempfile.mkdtemp(prefix="egfg_c_"))
+        d.mkdir(parents=True, exist_ok=True)
+        src = d / "prog.c"
+        bench = d / "bench.c"
+        built = d / "prog.so"
+        src.write_text(source)
+        bench.write_text(_BENCH)
+        subprocess.run(["gcc", *CFLAGS, "-o", str(built), str(src), str(bench), "-lm"], check=True, capture_output=True)
+        lib = cache.store_file("so", k, ".so", built) if lib is not None else built
     so = ctypes.CDLL(str(lib))
     so.infer.restype = None
     so.infer.argtypes = [ctypes.POINTER(ctypes.POINTER(ctypes.c_double)), ctypes.POINTER(ctypes.c_double)]

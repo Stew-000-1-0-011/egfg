@@ -274,7 +274,30 @@ def run_strategy(
     built from the factor graph, which only describes the whole problem when there are
     no Input leaves; for local problems (clusters, time steps) "seeds+X" therefore
     becomes X with the problem's own seeds.
+
+    With `EGFG_CACHE` set, results are kept by the structure and settings (see cache.py).
     """
+    from . import cache
+    from .egraph import SaturationResult, saturate
+
+    ck = None
+    if cache.directory("saturation") is not None:
+        # everything the saturation depends on: the structure, never the tables
+        struct = lambda g: (tuple(sorted(g.cards.items())), tuple((f.id, f.scope) for f in g.factors))  # noqa: E731
+        ck = cache.key("saturation", cache.code_version(), struct(fg), sorted(queries.items()),
+                       sorted((inputs or {}).items()), sorted((seeds or {}).items()), equalities,
+                       [struct(g) for g in seed_fgs or []], strategy, max_iters, node_limit, rules, time_limit_s)
+        hit = cache.load("saturation", ck)
+        if hit is not None:
+            return hit
+    out = _run_strategy(fg, queries, strategy, max_iters, node_limit, rules, inputs, seeds, time_limit_s,
+                        equalities, seed_fgs)
+    if ck is not None:
+        cache.save("saturation", ck, out)
+    return out
+
+
+def _run_strategy(fg, queries, strategy, max_iters, node_limit, rules, inputs, seeds, time_limit_s, equalities, seed_fgs):
     from .egraph import SaturationResult, saturate
 
     if inputs and strategy.startswith("seeds"):
