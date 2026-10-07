@@ -390,6 +390,8 @@ def tv_1d(exact: list[list[tuple[float, np.ndarray, np.ndarray]]], approx: dict,
             out += np.exp(w - 0.5 * np.log(2 * np.pi * s2) - 0.5 * (xs - float(m[0])) ** 2 / s2)
         return out
 
+    if all(k == () for k in approx):  # the message has no discrete part: compare the marginals over x
+        exact, modes = [[c for parts in exact for c in parts]], [()]
     allw = [w for parts in exact for w, _, _ in parts]
     Ze = np.logaddexp.reduce(allw)
     Za = np.logaddexp.reduce([w for parts in approx.values() for w, _, _ in parts])

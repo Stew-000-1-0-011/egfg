@@ -51,10 +51,8 @@ def models(quick: bool):
 
 
 def label(model, res, refs):
-    for name, ref in refs.items():
-        if _diff(model, res, ref) < 1e-8:
-            return name
-    return "-"
+    """The references the program reproduces (several when they coincide on this model)."""
+    return "=".join(name for name, ref in refs.items() if _diff(model, res, ref) < 1e-8) or "-"
 
 
 def _diff(model, res, ref):
