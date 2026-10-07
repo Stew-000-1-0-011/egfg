@@ -27,6 +27,7 @@ class OptimizeResult:
     sum_product_only: bool = False  # True when the computation relies on sum-only equalities
     structured: object | None = None  # the structure.Structured used (low-rank splits), if any
     partition: object | None = None  # partition.PartitionInfo when the partition was searched
+    model_ns: float | None = None  # predicted run time of the C code when cost="c" (cmodel)
 
     @property
     def saturation(self) -> SaturationResult:
@@ -56,16 +57,16 @@ class OptimizeResult:
 
 
 def _extract(g, fg: FactorGraph, extractor: str, time_limit_s: float, weights=None, overhead: int = 0,
-             shape_penalty: float = 0.0) -> Extraction:
+             shape_penalty: float = 0.0, model=None) -> Extraction:
     if shape_penalty and extractor != "greedy":
         raise ValueError("shape_penalty needs the greedy extractor")
     if extractor == "ilp":
-        return extract_dag_ilp(g, fg, time_limit_s=time_limit_s, weights=weights, overhead=overhead)
+        return extract_dag_ilp(g, fg, time_limit_s=time_limit_s, weights=weights, overhead=overhead, model=model)
     if extractor == "greedy":
         return extract_dag_greedy(g, fg, time_limit_s=time_limit_s, weights=weights, overhead=overhead,
-                                  shape_penalty=shape_penalty)
+                                  shape_penalty=shape_penalty, model=model)
     if extractor == "tree":
-        return extract_tree(g, fg, weights=weights, overhead=overhead)
+        return extract_tree(g, fg, weights=weights, overhead=overhead, model=model)
     raise ValueError(f"unknown extractor {extractor!r}")
 
 
@@ -90,6 +91,7 @@ def optimize(
     partition_trees: str = "halving",
     partition_jobs: int | None = None,
     partition_moves: tuple[str, ...] | None = None,
+    cost: Literal["flops", "c"] = "flops",
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
 
@@ -109,14 +111,33 @@ def optimize(
     `max_cluster_vars` variables per cluster. `partition_trees` ("halving", "all", "first")
     narrows the candidate clique trees, `partition_jobs` processes solve candidates in parallel (default: one per CPU; 1 = none) and
     `partition_moves` sets the exchange moves (partition.EXCHANGE by default).
+
+    `cost="c"` extracts (and searches the partition) by the calibrated time of the generated C
+    code (cmodel.py) instead of the operation count; without a calibration file it is "flops".
     """
+    from . import cmodel
+
+    if cost not in ("flops", "c"):
+        raise ValueError(f"unknown cost {cost!r}")
+    model = cmodel.load() if cost == "c" else None
+    res = _optimize(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed, time_limit_s, strategy,
+                    structure, call_overhead, shape_penalty, partition, partition_time_s, max_cluster_vars,
+                    exchange, boundary, partition_trees, partition_jobs, partition_moves, model)
+    if model is not None:
+        res.model_ns = model.dag_ns(res.extraction.dag, _eval_fg(fg, res))
+    return res
+
+
+def _optimize(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed, time_limit_s, strategy, structure,
+              call_overhead, shape_penalty, partition, partition_time_s, max_cluster_vars, exchange, boundary,
+              partition_trees, partition_jobs, partition_moves, model) -> OptimizeResult:
     if structure:
         return _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed,
-                                    time_limit_s, strategy, structure, call_overhead, shape_penalty)
+                                    time_limit_s, strategy, structure, call_overhead, shape_penalty, model)
     if partition == "search":
         return _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
                                   shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary,
-                                  partition_trees, partition_jobs, partition_moves)
+                                  partition_trees, partition_jobs, partition_moves, model)
     if partition != "budget":
         raise ValueError(f"unknown partition {partition!r}")
     jt = junction_tree(fg)
@@ -128,8 +149,9 @@ def optimize(
             inputs=p.inputs, seeds=p.seeds,
         )
         sats.append(sat)
-        ex = _extract(sat.graph, fg, extractor, time_limit_s, overhead=call_overhead, shape_penalty=shape_penalty)
-        if best is not None and best.cost < ex.cost:  # restart remembers its best round
+        ex = _extract(sat.graph, fg, extractor, time_limit_s, overhead=call_overhead, shape_penalty=shape_penalty,
+                      model=model)
+        if best is not None and _better(best, ex, fg, model):  # restart remembers its best round
             ex = best
         exs.append(ex)
     dag = stitch(problems, [e.dag for e in exs])
@@ -140,7 +162,7 @@ def optimize(
 
 def _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
                        shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary, trees, jobs,
-                       moves) -> OptimizeResult:
+                       moves, model=None) -> OptimizeResult:
     import os
 
     from .partition import EXCHANGE, search_partition
@@ -150,7 +172,7 @@ def _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s
     solve_kw = dict(strategy=strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
                     time_limit_s=time_limit_s)
     extract_kw = dict(extractor=extractor, time_limit_s=time_limit_s, overhead=call_overhead,
-                      shape_penalty=shape_penalty)
+                      shape_penalty=shape_penalty, model=model)
     dag, cur, info = search_partition(fg, solve_kw, extract_kw, partition_time_s, max_cluster_vars, boundary,
                                       exchange, trees=trees, jobs=jobs, moves=moves or EXCHANGE)
     exs = [s.extraction for s in cur.solved]
@@ -159,8 +181,15 @@ def _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s
     return OptimizeResult(sats, ex, [p.variables for p in cur.problems], exs, partition=info)
 
 
+def _better(a: Extraction, b: Extraction, fg: FactorGraph, model) -> bool:
+    """Is `a` cheaper than `b` (operations, or the model's time)?"""
+    if model is None:
+        return a.cost < b.cost
+    return model.dag_ns(a.dag, fg) < model.dag_ns(b.dag, fg)
+
+
 def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed, time_limit_s,
-                         strategy, structure, call_overhead=0, shape_penalty=0.0) -> OptimizeResult:
+                         strategy, structure, call_overhead=0, shape_penalty=0.0, model=None) -> OptimizeResult:
     from .baselines import junction_tree_terms
     from .ir import all_marginal_queries
     from .structure import low_rank
@@ -176,8 +205,9 @@ def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_bu
     seeds = junction_tree_terms(fg)[0] if seed else None
     sat, best = run_strategy(st.fg, queries, strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
                              seeds=seeds, equalities=st.equalities, seed_fgs=seed_fgs)
-    ex = _extract(sat.graph, st.fg, extractor, time_limit_s, overhead=call_overhead, shape_penalty=shape_penalty)
-    if best is not None and best.cost < ex.cost:
+    ex = _extract(sat.graph, st.fg, extractor, time_limit_s, overhead=call_overhead, shape_penalty=shape_penalty,
+                  model=model)
+    if best is not None and _better(best, ex, st.fg, model):
         ex = best
     return OptimizeResult([sat], ex, [frozenset(fg.variables())], [ex], st.fg, bool(st.equalities), st)
 

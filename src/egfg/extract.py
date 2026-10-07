@@ -69,11 +69,18 @@ def class_leaves(g: EGraphData) -> dict[str, frozenset[int]]:
 
 
 def _costs(
-    g: EGraphData, fg: FactorGraph, scopes, weights: Weights | None = None, overhead: int = 0
+    g: EGraphData, fg: FactorGraph, scopes, weights: Weights | None = None, overhead: int = 0, model=None
 ) -> dict[tuple[str, int], int]:
     """Per node: weight × (operations + `overhead` per non-leaf node). The overhead models a
-    fixed cost per operation (a library call), which favours computations with fewer steps."""
+    fixed cost per operation (a library call), which favours computations with fewer steps.
+    With a `model` (cmodel.CostModel): its time for the node on its own (no fusion), in ps."""
     w = weights or {}
+    if model is not None:
+        return {
+            (cid, i): w.get(cid, 1) * round(1000 * model.node_ns(n, scopes[cid], [scopes[c] for c in n.children], fg))
+            for cid, nodes in g.classes.items()
+            for i, n in enumerate(nodes)
+        }
     return {
         (cid, i): w.get(cid, 1)
         * (node_cost(n, scopes[cid], [scopes[c] for c in n.children], fg) + (overhead if n.children else 0))
@@ -142,9 +149,10 @@ def _tree_choice(g: EGraphData, costs: dict[tuple[str, int], int]) -> dict[str, 
     return {cid: n for cid, (_, n) in best.items()}
 
 
-def extract_tree(g: EGraphData, fg: FactorGraph, weights: Weights | None = None, overhead: int = 0) -> Extraction:
+def extract_tree(g: EGraphData, fg: FactorGraph, weights: Weights | None = None, overhead: int = 0,
+                 model=None) -> Extraction:
     start = time.perf_counter()
-    costs = _costs(g, fg, class_scopes(g, fg), weights, overhead)
+    costs = _costs(g, fg, class_scopes(g, fg), weights, overhead, model)
     return _build(g, fg, _tree_choice(g, costs), None, start, weights, overhead)
 
 
@@ -210,7 +218,7 @@ def node_shape(n: ENode, cid: str, scopes, cards) -> tuple | None:
 
 def extract_dag_greedy(
     g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0,
-    shape_penalty: float = 0.0,
+    shape_penalty: float = 0.0, model=None,
 ) -> Extraction:
     """Local search on the shared (DAG) cost, starting from the tree (or seed) choice.
 
@@ -218,14 +226,26 @@ def extract_dag_greedy(
     keep a switch when the result is acyclic and cheaper. Stop when a full pass
     finds no improvement or time runs out. `shape_penalty` (α) adds α × the number of
     distinct node shapes used, a proxy for the size of the compact C code (phase J).
+    With a `model` (cmodel.CostModel) the cost is its predicted time of the whole DAG's C code
+    (fusion depends on how often each value is used, so it is counted on the whole DAG).
     """
     start = time.perf_counter()
     scopes = class_scopes(g, fg)
-    costs = _costs(g, fg, scopes, weights, overhead)
+    costs = _costs(g, fg, scopes, weights, overhead, model)
     ncost = _node_costs(g, costs)
     choice = _start_choice(g, costs)
     roots = list(dict.fromkeys(g.roots.values()))
     reach = _reach_cost
+    if model is not None:
+        if shape_penalty or weights or overhead:
+            raise ValueError("a cost model is not combined with weights, overhead or shape_penalty")
+        from .cmodel import features
+
+        def reach(roots, choice, ncost):
+            if _reach_cost(roots, choice, ncost) is None:  # a cycle
+                return None
+            nodes = {cid: choice[cid] for cid in _reachable_under(roots, choice)}
+            return model.predict(features(nodes, g.roots, scopes, fg))
     if shape_penalty:
         shapes = {(cid, n): node_shape(n, cid, scopes, fg.cards) for cid, nodes in g.classes.items() for n in nodes}
 
@@ -271,12 +291,14 @@ def _reachable_under(roots, choice: dict[str, ENode]) -> list[str]:
 
 
 def extract_dag_ilp(
-    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0
+    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0,
+    model=None,
 ) -> Extraction:
-    """Choose one node per needed e-class minimizing the shared (DAG) cost."""
+    """Choose one node per needed e-class minimizing the shared (DAG) cost (with a `model`: the
+    sum of its per-node times, without fusion)."""
     start = time.perf_counter()
     scopes = class_scopes(g, fg)
-    costs = _costs(g, fg, scopes, weights, overhead)
+    costs = _costs(g, fg, scopes, weights, overhead, model)
     cids = _reachable_classes(g)
     prob = pulp.LpProblem("dag_extraction", pulp.LpMinimize)
     x = {

@@ -62,6 +62,7 @@ class Solved:
     hit_limit: bool
     nodes: int
     seconds: float
+    cost: float  # what the search minimizes: operations, or the cost model's time
 
 
 def solve_local(fg: FactorGraph, p: LocalProblem, solve_kw: dict, extract_kw: dict) -> Solved:
@@ -70,15 +71,17 @@ def solve_local(fg: FactorGraph, p: LocalProblem, solve_kw: dict, extract_kw: di
     from .pipeline import _extract
 
     t0 = time.perf_counter()
+    model = extract_kw.get("model")
+    metric = (lambda d: model.dag_ns(d, fg)) if model is not None else (lambda d: dag_cost(d, fg))  # noqa: E731
     sat, best = run_strategy(fg, p.queries, inputs=p.inputs, seeds=p.seeds, **solve_kw)
     ex = _extract(sat.graph, fg, **extract_kw)
-    if best is not None and best.cost < ex.cost:
-        ex = best
+    cost = metric(ex.dag)
+    if best is not None and metric(best.dag) < cost:
+        ex, cost = best, metric(best.dag)
     fallback = to_dag({q: p.seeds.get(q, t) for q, t in p.queries.items()}, p.inputs)
-    fcost = dag_cost(fallback, fg)
-    if fcost < ex.cost:
-        ex = Extraction(fallback, fcost, None, ex.seconds)
-    return Solved(ex, sat.hit_limit, sat.num_nodes, time.perf_counter() - t0)
+    if metric(fallback) < cost:
+        ex, cost = Extraction(fallback, dag_cost(fallback, fg), None, ex.seconds), metric(fallback)
+    return Solved(ex, sat.hit_limit, sat.num_nodes, time.perf_counter() - t0, cost)
 
 
 _WORKER: dict = {}
@@ -98,7 +101,7 @@ def _key(p: LocalProblem):
 
 @dataclass
 class Evaluated:
-    cost: int
+    cost: float  # summed over the local problems
     hits: int
     problems: list[LocalProblem]
     solved: list[Solved]
@@ -171,7 +174,7 @@ class PartitionSearch:
         self.tries += 1
         problems = self.problems(jt, state)
         solved = [self.solve(p) for p in problems]
-        return Evaluated(sum(s.extraction.cost for s in solved), sum(s.hit_limit for s in solved), problems, solved)
+        return Evaluated(sum(s.cost for s in solved), sum(s.hit_limit for s in solved), problems, solved)
 
     # ---- moves -------------------------------------------------------------------------
     def nvars(self, jt: JunctionTree, cliques) -> int:
