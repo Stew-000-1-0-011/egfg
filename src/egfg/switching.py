@@ -415,9 +415,12 @@ def _ncfg(dvars, cards) -> int:
     return int(np.prod([cards[v] for v in dvars])) if dvars else 1
 
 
-def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam: float) -> tuple[dict, dict]:
-    """(impls by state, flops by impl). The extraction cost of `collapse` adds λ per merged
-    component, times (1 + the number of this step's observations not yet in the merged value)."""
+def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam: float,
+                    price: float | None = None, bound=None) -> tuple[dict, dict, dict]:
+    """(impls by state, flops by impl, expected KL bound by collapse impl when `bound` is given).
+    The extraction cost of `collapse` adds λ per merged component, times (1 + the number of this step's observations not yet in the merged value).
+    With `price` (μ), it adds μ × the expected KL bound of that collapse instead (`bound`, an
+    `ExpectedBound`; phase I)."""
     cards, dims = model.local_cards(), model.local_dims()
     facs = model.factors(loc.kind)
     scopes = class_scopes(g, loc.fg)
@@ -443,13 +446,15 @@ def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam
     norm = {cid: generated(cid) for cid in scopes}
     impls: dict = {}
     flops: dict = {}
+    errs: dict = {}
 
     def add(cid, out, node, kids, fl, op, penalty=0.0):
         if out == MOMENT and not norm[cid]:
-            return
-        im = Impl(cid, out, node, tuple(kids), int(round(fl + penalty)), op)
+            return None
+        im = Impl(cid, out, node, tuple(kids), fl + penalty if penalty else int(fl), op)
         impls.setdefault(im.state, []).append(im)
         flops[im] = int(fl)
+        return im
 
     leaf_of = {cid: nd for cid, nodes in g.classes.items() for nd in nodes if nd.op == "leaf"}
     for cid, nodes in g.classes.items():
@@ -477,9 +482,19 @@ def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam
                 else:
                     # an error made before an observation is multiplied in gets amplified by it
                     # (see product_tau): count the observations not yet in the collapsed value
-                    missing = len(loc.obs_ids - leaves[c])
-                    add(cid, MOMENT, nd, ((c, MOMENT),), n[c] * (D[c] + D[c] ** 2), "collapse",
-                        lam * n[c] * (1 + missing))
+                    eps = None
+                    if bound is not None:
+                        first = len(facs) - len(model.observation)
+                        obs = [i - first for i in loc.obs_ids & leaves[c]]
+                        eps = bound(bound.site(dpart[c], x, cpart[c], obs, loc.kind == "head"))
+                    if price is not None:
+                        penalty = price * eps
+                    else:
+                        missing = len(loc.obs_ids - leaves[c])
+                        penalty = lam * n[c] * (1 + missing)
+                    im = add(cid, MOMENT, nd, ((c, MOMENT),), n[c] * (D[c] + D[c] ** 2), "collapse", penalty)
+                    if im is not None and eps is not None:
+                        errs[im] = eps
             else:
                 ca, cb = nd.children
                 add(cid, INFO, nd, ((ca, INFO), (cb, INFO)), n[cid] * cost_info_mul(D[cid]), "info_mul")
@@ -505,7 +520,7 @@ def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam
             add(cid, INFO, None, ((cid, COND),), n[cid] * cost_factor_to_info(g0, dims), "cond>info")
         add(cid, INFO, None, ((cid, MOMENT),), n[cid] * cost_convert(D[cid]), "moment>info")
         add(cid, MOMENT, None, ((cid, INFO),), n[cid] * cost_convert(D[cid]), "info>moment")
-    return impls, flops
+    return impls, flops, errs
 
 
 # ---------------------------------------------------------------------------
@@ -521,6 +536,7 @@ class STemplate:
     fwd_rep: str
     flops: int
     counts: dict = field(default_factory=dict)
+    eps: float | None = None  # with an ExpectedBound: the sum of the expected KL bounds of its collapses
 
 
 @dataclass
@@ -531,21 +547,23 @@ class SFilterProgram:
     groups: list[tuple[str, ...]]
     lam: float
     search_s: float
+    price: float | None = None
 
     @property
     def collapses(self) -> int:
         return self.step.counts.get("collapse", 0)
 
 
-def _template(sat, loc, model, fwd_rep, lam, method, time_limit_s) -> STemplate:
+def _template(sat, loc, model, fwd_rep, lam, method, time_limit_s, price=None, bound=None) -> STemplate:
     g = sat.graph
-    impls, flops = implementations(g, loc, model, fwd_rep, lam)
+    impls, flops, errs = implementations(g, loc, model, fwd_rep, lam, price, bound)
     roots = {q: (cid, fwd_rep if q.startswith("msg") else MOMENT) for q, cid in g.roots.items()}
     ch = extract_rep(g, impls, roots, method, None, time_limit_s)
     counts: dict[str, int] = {}
     for im in ch.choice.values():
         counts[im.op] = counts.get(im.op, 0) + 1
-    return STemplate(loc, model.factors(loc.kind), ch, fwd_rep, sum(flops[im] for im in ch.choice.values()), counts)
+    eps = sum(errs.get(im, 0.0) for im in ch.choice.values()) if bound is not None else None
+    return STemplate(loc, model.factors(loc.kind), ch, fwd_rep, sum(flops[im] for im in ch.choice.values()), counts, eps)
 
 
 def message_groups(model: SwitchingModel) -> list[list[tuple[str, ...]]]:
@@ -562,7 +580,8 @@ def message_groups(model: SwitchingModel) -> list[list[tuple[str, ...]]]:
     return [sum(choice, []) for choice in itertools.product(*options)]
 
 
-def compile_switching_programs(model: SwitchingModel, lams=(0.0, 1e6), uniform: bool = False, **kw) -> list[SFilterProgram]:
+def compile_switching_programs(model: SwitchingModel, lams=(0.0, 1e6), uniform: bool = False,
+                               prices=None, **kw) -> list[SFilterProgram]:
     """The best program for every message form and λ (duplicates removed): candidates that trade
     operations for approximation differently (the message form sets how many Gaussians are kept;
     λ, where the mixtures are merged). `uniform`: only the forms with the same choice for every
@@ -571,9 +590,14 @@ def compile_switching_programs(model: SwitchingModel, lams=(0.0, 1e6), uniform: 
     forms = message_groups(model)
     if uniform:
         forms = [forms[0], forms[-1]] if len(forms) > 1 else forms
+    if prices is not None and "bound" not in kw:
+        from .switching_bound import ExpectedBound
+
+        kw["bound"] = ExpectedBound(model)
+    settings = [dict(price=pr) for pr in prices] if prices is not None else [dict(lam=lam) for lam in lams]
     for grp in forms:
-        for lam in lams:
-            p = compile_switching_filter(model, lam=lam, groups=grp, **kw)
+        for st in settings:
+            p = compile_switching_filter(model, groups=grp, **st, **kw)
             key = (tuple(p.groups), p.step.fwd_rep, tuple(sorted(p.step.counts.items())), p.step.flops)
             if key not in seen:
                 seen.add(key)
@@ -592,30 +616,46 @@ def compile_switching_filter(
     node_limit: int = 50_000,
     time_limit_s: float = 60,
     reps: tuple[str, ...] = (MOMENT, INFO),
+    price: float | None = None,
+    bound=None,
+    cache: dict | None = None,
 ) -> SFilterProgram:
     """The cheapest program (flops + λ × merged components per step) over the message forms
-    (`groups`, default: every form from `message_groups`) and message representations."""
+    (`groups`, default: every form from `message_groups`) and message representations.
+    With `price`, the penalty is μ × the expected KL bound of each collapse (phase I). `cache`
+    keeps the saturations between calls on the same model."""
     from .search import run_strategy
 
+    if price is not None and bound is None:
+        from .switching_bound import ExpectedBound
+
+        bound = ExpectedBound(model)
     start = time.perf_counter()
     best = None
     for grp in [groups] if groups is not None else message_groups(model):
         sats = {}
         for kind in ("head", "step"):
+            key = (tuple(grp), kind, strategy, rules, max_iters, node_limit)
+            if cache is not None and key in cache:
+                sats[kind] = cache[key]
+                continue
             loc = local_step(model, kind, grp)
             sat, _ = run_strategy(loc.fg, loc.queries, strategy, max_iters=max_iters, node_limit=node_limit,
                                   rules=rules, inputs=loc.inputs, seeds=loc.seeds)
             sats[kind] = (loc, sat)
+            if cache is not None:
+                cache[key] = sats[kind]
         for r in reps:
             try:
-                t = {k: _template(sats[k][1], sats[k][0], model, r, lam, extractor, time_limit_s) for k in ("head", "step")}
+                t = {k: _template(sats[k][1], sats[k][0], model, r, lam, extractor, time_limit_s, price, bound)
+                     for k in ("head", "step")}
             except ValueError:  # this representation cannot reach every root
                 continue
             key = (t["step"].choice.cost, t["head"].choice.cost)
             if best is None or key < best[0]:
                 best = (key, t, grp)
     _, t, grp = best
-    return SFilterProgram(model, t["head"], t["step"], list(grp), lam, time.perf_counter() - start)
+    return SFilterProgram(model, t["head"], t["step"], list(grp), lam, time.perf_counter() - start, price)
 
 
 # ---------------------------------------------------------------------------
