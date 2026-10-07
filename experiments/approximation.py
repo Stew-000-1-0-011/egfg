@@ -92,7 +92,10 @@ def run_model(name, model, uniform) -> list[dict]:
         sets.append(("state-wide", stacked_model(model), stacked_obs))
     for kind, m, conv in sets:
         t0 = time.perf_counter()
-        progs = compile_switching_programs(m, uniform=uniform and kind == "egfg")
+        # three or more components: breadth-first saturation hits the node limit early; the staged
+        # search with every rule finds cheaper programs
+        kw = dict(strategy="staged", rules="full") if uniform and kind == "egfg" else {}
+        progs = compile_switching_programs(m, uniform=uniform and kind == "egfg", **kw)
         search = time.perf_counter() - t0
         for p in progs:
             row = {"model": name, "kind": kind, "groups": " ".join("+".join(g) for g in p.groups), "lam": p.lam,
