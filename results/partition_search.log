@@ -1,0 +1,2 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+{'problem': 'chain64_k4', 'vars': 64, 'method': 'boundary', 'flops': 4248, 'optimize_s': 21.2, 'clusters': 63, 'max_cluster_vars': 2, 'hit_limit': False, 'max_nodes': 82, 'trees': 1, 'tries': 373, 'solves': 249, 'phases': 'jt=4248 merge=4248 exchange=4248 boundary=4248', 'accepted': '', 'split_msgs': 0}
