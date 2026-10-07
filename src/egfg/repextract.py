@@ -89,12 +89,14 @@ def _restrict(choice: dict[State, Impl], roots) -> dict[State, Impl]:
     return out
 
 
-def _tree(impls_of: dict[State, list[Impl]], weights, allowed=None) -> dict[State, Impl]:
+def _tree(impls_of: dict[State, list[Impl]], weights, allowed=None, deadline: float | None = None) -> dict[State, Impl]:
     """Per state, the implementation minimizing own cost + children's tree costs (fixpoint)."""
     best: dict[State, tuple[int, Impl]] = {}
     changed = True
     while changed:
         changed = False
+        if deadline is not None and time.perf_counter() > deadline and best:
+            break  # out of time: keep what the passes so far found (every state reached keeps a valid choice)
         for s, impls in impls_of.items():
             for im in impls:
                 if allowed is not None and not allowed(im):
@@ -108,12 +110,13 @@ def _tree(impls_of: dict[State, list[Impl]], weights, allowed=None) -> dict[Stat
     return {s: im for s, (_, im) in best.items()}
 
 
-def _start(g: EGraphData, impls_of, roots, weights) -> dict[State, Impl]:
-    tree = _tree(impls_of, weights)
+def _start(g: EGraphData, impls_of, roots, weights, deadline: float | None = None) -> dict[State, Impl]:
+    tree = _tree(impls_of, weights, deadline=deadline)
     if not g.seed:
         return tree
     # the seed: in seed e-classes use only the seed node (or conversions)
-    seeded = _tree(impls_of, weights, lambda im: im.node is None or im.cid not in g.seed or im.node == g.seed[im.cid])
+    seeded = _tree(impls_of, weights, lambda im: im.node is None or im.cid not in g.seed or im.node == g.seed[im.cid],
+                   deadline=deadline)
     seeded = {**tree, **seeded}
     a, b = _reach(roots, tree, weights), _reach(roots, seeded, weights)
     if b is not None and (a is None or b <= a):
@@ -138,7 +141,7 @@ def extract_rep(
 ) -> RepChoice:
     start = time.perf_counter()
     rs = list(dict.fromkeys(roots.values()))
-    choice = _start(g, impls_of, rs, weights)
+    choice = _start(g, impls_of, rs, weights, start + time_limit_s)
     if _reach(rs, choice, weights) is None:
         raise ValueError("no implementation reaches every root (a required representation is unavailable)")
     if method == "tree":
