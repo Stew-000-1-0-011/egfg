@@ -1,0 +1,103 @@
+problem,vars,method,flops,optimize_s,clusters,max_cluster_vars,hit_limit,max_nodes,trees,tries,solves,phases,accepted,split_msgs,run_ns
+grid3x3_k3,9,boundary,1719,8.39,4,6,False,12405,2,42,42,jt=1917 merge=1719 exchange=1719 boundary=1719,merge:2,0,317.5
+grid3x3_k3,9,budget4,1863,0.23,6,4,False,787,,,,,,,244.7
+grid3x3_k3,9,budget5,1863,0.24,4,5,False,3212,,,,,,,256.6
+grid3x3_k3,9,budget6,1845,0.55,2,6,False,12405,,,,,,,230.7
+grid3x3_k3,9,budget7,1845,0.64,2,6,False,12405,,,,,,,240.5
+grid3x3_k3,9,budget8,1845,0.56,2,6,False,12405,,,,,,,232.9
+grid3x3_k3,9,exchange,1719,6.32,4,6,False,12405,2,22,29,jt=1917 merge=1719 exchange=1719,merge:2,0,231.8
+grid3x3_k3,9,jt,2241,0.0,,,,,,,,,,,333.1
+grid3x3_k3,9,merge,1719,5.24,4,6,False,12405,2,15,25,jt=1917 merge=1719,merge:2,0,214.9
+grid3x3_k3,9,none,1980,6.1,1,9,True,135466,,,,,,,348.8
+cycle10_k4,10,boundary,2288,2.23,6,4,False,161,2,60,49,jt=2320 merge=2288 exchange=2288 boundary=2288,merge:3,0,225.7
+cycle10_k4,10,budget4,2560,0.17,4,4,False,161,,,,,,,186.4
+cycle10_k4,10,budget5,2560,0.2,4,4,False,161,,,,,,,201.7
+cycle10_k4,10,budget6,2544,0.25,2,6,False,2599,,,,,,,191.8
+cycle10_k4,10,budget7,2544,0.24,2,6,False,2599,,,,,,,198.2
+cycle10_k4,10,budget8,2544,0.25,2,6,False,2599,,,,,,,193.5
+cycle10_k4,10,exchange,2288,1.38,6,4,False,161,2,31,33,jt=2320 merge=2288 exchange=2288,merge:3,0,225.9
+cycle10_k4,10,jt,3040,0.0,,,,,,,,,,,238.0
+cycle10_k4,10,merge,2288,1.62,6,4,False,161,2,22,32,jt=2320 merge=2288,merge:3,0,227.8
+cycle10_k4,10,none,2496,3.41,1,10,True,83934,,,,,,,271.8
+sparse10_k3,10,boundary,774,3.49,7,4,False,1059,3,84,57,jt=801 merge=774 exchange=774 boundary=774,merge:3,0,159.9
+sparse10_k3,10,budget4,900,0.27,4,4,False,247,,,,,,,139.4
+sparse10_k3,10,budget5,909,0.27,3,5,False,4228,,,,,,,138.6
+sparse10_k3,10,budget6,909,0.28,3,5,False,4228,,,,,,,177.6
+sparse10_k3,10,budget7,999,1.95,2,7,True,57479,,,,,,,198.8
+sparse10_k3,10,budget8,999,1.83,2,7,True,57479,,,,,,,177.7
+sparse10_k3,10,exchange,774,2.4,7,4,False,1059,3,52,37,jt=801 merge=774 exchange=774,merge:3,0,124.6
+sparse10_k3,10,jt,990,0.0,,,,,,,,,,,157.0
+sparse10_k3,10,merge,774,2.29,7,4,False,1059,3,42,37,jt=801 merge=774,merge:3,0,127.4
+sparse10_k3,10,none,837,4.65,1,10,True,103073,,,,,,,137.1
+grid4x4_k3,16,boundary,7776,33.98,8,6,False,4737,1,207,135,jt=8442 merge=8010 exchange=7857 boundary=7776,merge:4 factor:3 owner:1,0,1519.1
+grid4x4_k3,16,budget4,9117,0.56,12,5,False,414,,,,,,,1874.0
+grid4x4_k3,16,budget5,9153,0.63,9,5,False,1300,,,,,,,1403.6
+grid4x4_k3,16,budget6,8496,0.66,6,6,False,5046,,,,,,,1321.1
+grid4x4_k3,16,budget7,8262,0.74,5,7,False,6737,,,,,,,1391.0
+grid4x4_k3,16,budget8,10116,2.48,4,8,True,52570,,,,,,,1686.1
+grid4x4_k3,16,exchange,7857,18.62,8,6,False,4835,1,100,74,jt=8442 merge=8010 exchange=7857,merge:4 factor:3,0,1363.6
+grid4x4_k3,16,jt,9054,0.0,,,,,,,,,,,1426.4
+grid4x4_k3,16,merge,8010,10.92,8,6,False,10929,1,27,37,jt=8442 merge=8010,merge:4,0,1483.8
+grid5x5_k2,25,boundary,3176,44.17,17,6,False,1277,4,515,304,jt=3268 merge=3236 exchange=3216 boundary=3176,merge:6 factor:2 owner:2,0,482.2
+grid5x5_k2,25,budget4,3380,1.15,20,6,False,1015,,,,,,,578.1
+grid5x5_k2,25,budget5,3464,1.37,16,6,False,1316,,,,,,,511.1
+grid5x5_k2,25,budget6,3424,1.79,12,6,False,5062,,,,,,,548.2
+grid5x5_k2,25,budget7,3388,1.48,9,7,False,5667,,,,,,,472.4
+grid5x5_k2,25,budget8,3652,5.47,7,8,True,56108,,,,,,,568.3
+grid5x5_k2,25,exchange,3216,29.12,17,6,False,1304,4,237,204,jt=3268 merge=3236 exchange=3216,merge:6 factor:2,0,526.3
+grid5x5_k2,25,jt,3596,0.01,,,,,,,,,,,759.7
+grid5x5_k2,25,merge,3236,26.55,18,6,False,1304,4,119,175,jt=3268 merge=3236,merge:5,0,496.5
+grid6x6_k2,36,boundary,7472,135.99,24,7,False,3913,4,1259,513,jt=7720 merge=7584 exchange=7496 boundary=7472,merge:18 factor:6 owner:3,0,1205.3
+grid6x6_k2,36,budget4,7936,2.28,30,7,False,1035,,,,,,,1284.0
+grid6x6_k2,36,budget5,8028,2.45,26,7,False,1336,,,,,,,1277.9
+grid6x6_k2,36,budget6,8064,2.59,20,7,False,5082,,,,,,,1295.7
+grid6x6_k2,36,budget7,8044,7.03,16,7,True,62274,,,,,,,1264.9
+grid6x6_k2,36,budget8,8420,6.4,12,8,True,51338,,,,,,,1404.4
+grid6x6_k2,36,exchange,7496,105.5,24,7,False,4305,4,655,337,jt=7720 merge=7584 exchange=7496,merge:18 factor:6,0,1173.7
+grid6x6_k2,36,jt,8392,0.01,,,,,,,,,,,1834.6
+grid6x6_k2,36,merge,7584,87.35,24,7,False,3949,4,355,281,jt=7720 merge=7584,merge:18,0,1301.8
+cycle16_k16,16,boundary,243712,4.58,11,4,False,167,2,115,94,jt=244480 merge=243712 exchange=243712 boundary=243712,merge:4,0,23926.8
+cycle16_k16,16,budget4,268544,0.32,7,4,False,167,,,,,,,31926.3
+cycle16_k16,16,budget5,268544,0.4,7,4,False,167,,,,,,,30969.5
+cycle16_k16,16,budget6,293120,0.44,4,6,False,2606,,,,,,,38483.1
+cycle16_k16,16,budget7,293120,0.39,4,6,False,2606,,,,,,,37228.4
+cycle16_k16,16,budget8,300544,2.61,3,8,True,70300,,,,,,,39171.0
+cycle16_k16,16,exchange,243712,3.02,11,4,False,167,2,59,64,jt=244480 merge=243712 exchange=243712,merge:4,0,23616.6
+cycle16_k16,16,jt,323584,0.0,,,,,,,,,,,62165.4
+cycle16_k16,16,merge,243712,3.2,11,4,False,167,2,43,62,jt=244480 merge=243712,merge:4,0,29707.0
+sparse20_k3,20,boundary,2253,25.25,15,6,False,8968,2,156,137,jt=2406 merge=2388 exchange=2253 boundary=2253,merge:3 move:1,0,417.2
+sparse20_k3,20,budget4,2577,0.77,10,4,False,1291,,,,,,,506.7
+sparse20_k3,20,budget5,2352,0.88,8,5,False,8665,,,,,,,342.3
+sparse20_k3,20,budget6,2637,2.06,5,6,False,33857,,,,,,,419.0
+sparse20_k3,20,budget7,2637,2.2,5,6,False,33857,,,,,,,393.2
+sparse20_k3,20,budget8,2637,1.9,5,6,False,33857,,,,,,,611.0
+sparse20_k3,20,exchange,2253,19.47,15,6,False,8968,2,84,91,jt=2406 merge=2388 exchange=2253,merge:3 move:1,0,359.7
+sparse20_k3,20,jt,3249,0.0,,,,,,,,,,,584.3
+sparse20_k3,20,merge,2388,10.73,16,5,False,8920,2,43,73,jt=2406 merge=2388,merge:2,0,384.2
+coupled3_k3_t6,18,boundary,4860,49.16,13,5,False,3359,3,270,212,jt=4935 merge=4878 exchange=4860 boundary=4860,merge:9 move:1 factor:1,0,1357.9
+coupled3_k3_t6,18,budget4,5424,1.04,14,4,False,3359,,,,,,,1447.4
+coupled3_k3_t6,18,budget5,5196,2.37,8,5,False,33977,,,,,,,1346.3
+coupled3_k3_t6,18,budget6,5406,5.96,6,6,True,59705,,,,,,,1381.6
+coupled3_k3_t6,18,budget7,5484,8.27,5,7,True,59705,,,,,,,1404.8
+coupled3_k3_t6,18,budget8,6870,8.53,4,8,True,72348,,,,,,,1914.9
+coupled3_k3_t6,18,exchange,4860,41.76,13,5,False,3359,3,163,147,jt=4935 merge=4878 exchange=4860,merge:9 move:1 factor:1,0,1334.0
+coupled3_k3_t6,18,jt,5907,0.0,,,,,,,,,,,1745.5
+coupled3_k3_t6,18,merge,4878,36.78,13,5,False,3087,3,71,87,jt=4935 merge=4878,merge:9,0,1476.5
+factorial3_k3_t6,18,boundary,5850,67.12,6,7,False,6686,4,194,182,jt=6714 merge=5850 exchange=5850 boundary=5850,merge:27,0,1474.1
+factorial3_k3_t6,18,budget4,6687,0.83,15,4,False,1022,,,,,,,1390.1
+factorial3_k3_t6,18,budget5,6201,0.64,8,5,False,3990,,,,,,,1360.3
+factorial3_k3_t6,18,budget6,6363,0.7,7,6,False,3990,,,,,,,1454.5
+factorial3_k3_t6,18,budget7,6651,4.26,4,7,True,83114,,,,,,,1528.0
+factorial3_k3_t6,18,budget8,6651,4.27,4,7,True,83114,,,,,,,1642.7
+factorial3_k3_t6,18,exchange,5850,59.26,6,7,False,6686,4,144,152,jt=6714 merge=5850 exchange=5850,merge:27,0,1466.1
+factorial3_k3_t6,18,jt,8055,0.0,,,,,,,,,,,2069.8
+factorial3_k3_t6,18,merge,5850,56.17,6,7,False,6686,4,119,140,jt=6714 merge=5850,merge:27,0,1468.8
+chain64_k4,64,boundary,4248,21.2,63,2,False,82,1,373,249,jt=4248 merge=4248 exchange=4248 boundary=4248,,0,1231.3
+chain64_k4,64,budget4,4248,2.66,31,4,False,540,,,,,,,1237.9
+chain64_k4,64,budget5,4248,2.33,17,5,False,2020,,,,,,,1231.9
+chain64_k4,64,budget6,4248,2.24,16,6,False,7740,,,,,,,1275.5
+chain64_k4,64,budget7,4248,3.33,15,7,False,29458,,,,,,,1226.2
+chain64_k4,64,budget8,4248,3.4,15,7,False,29458,,,,,,,1239.2
+chain64_k4,64,exchange,4248,11.07,63,2,False,82,1,125,125,jt=4248 merge=4248 exchange=4248,,0,1216.7
+chain64_k4,64,jt,5952,0.02,,,,,,,,,,,1150.3
+chain64_k4,64,merge,4248,10.48,63,2,False,82,1,63,125,jt=4248 merge=4248,,0,1218.9
