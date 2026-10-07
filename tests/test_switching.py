@@ -75,7 +75,7 @@ def test_no_approximation_in_the_first_step_matches_exact():
 
 def test_independent_targets_per_target_imm_equals_state_wide_imm():
     model = targets(2, 2, 1)
-    obs = simulate(model, 5, seed=4)
+    obs = simulate(model, 40, seed=4)  # long enough to catch unnormalized messages drifting
     p = compile_switching_filter(model, lam=0.0, groups=[("m0", "x0"), ("m1", "x1")])
     assert _max_diff(model, run_filter(p, obs), imm(stack(model), obs)) < 1e-8
 

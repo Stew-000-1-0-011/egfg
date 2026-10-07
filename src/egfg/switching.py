@@ -336,6 +336,13 @@ def product_tau(approx: CG, exact: CG | None, out: CG, sup_exact: float | None =
     return min(1.0, 2 * approx.tau * math.exp(ls + la - lo))
 
 
+def normalize(v: CG) -> CG:
+    lm = log_mass(v)
+    if lm is None or not np.isfinite(lm):
+        return v
+    return CG(v.dvars, {c: _with_weight(p, _weight(p) - lm) for c, p in v.comps.items()}, v.tau, v.kernel_child, kls=v.kls)
+
+
 def shift_back(v: CG) -> CG:
     ren = lambda xs: tuple(at(split(x)[0], -1) for x in xs)  # noqa: E731
     comps = {}
@@ -718,7 +725,9 @@ class SwitchingFilter:
         tmpl = self.p.head if self.t == 0 else self.p.step
         kls: list[float] = []
         out = evaluate_template(tmpl, self.p.model, ys, self.inputs, kls, self.t)
-        msgs = [out[f"msg{k}"] for k in range(len(tmpl.local.groups))]
+        # normalized (a message is defined up to a constant; unnormalized ones pick up the other
+        # parts' constants at every step and their log weights grow without bound)
+        msgs = [normalize(out[f"msg{k}"]) for k in range(len(tmpl.local.groups))]
         self.inputs = {f"fwd{k}": shift_back(cg_convert(v, self.p.step.fwd_rep) if v.form != self.p.step.fwd_rep else v)
                        for k, v in enumerate(msgs)}
         self.t += 1
