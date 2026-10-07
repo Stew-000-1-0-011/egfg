@@ -34,13 +34,14 @@ from egfg import arena  # noqa: E402
 from egfg.baselines import candidate_orders, junction_tree_dag  # noqa: E402
 from egfg.ccodegen import compile_c_program, generate_c  # noqa: E402
 from egfg.cmodel import FEATURES, CostModel, dag_features  # noqa: E402
-from egfg.cost import dag_cost  # noqa: E402
+from egfg.cost import dag_cost, max_intermediate_size  # noqa: E402
 from egfg.extract import _build, _costs, _reachable_under, _start_choice, class_scopes  # noqa: E402
 from egfg.generators import chain, cycle, grid, star  # noqa: E402
 from egfg.pipeline import optimize  # noqa: E402
 
 SMALL = 12
 FOLDS = 5
+MAX_TABLE = 1 << 22  # skip programs with a larger intermediate table (random variants can blow up)
 
 
 def problems():
@@ -111,6 +112,8 @@ def programs(args) -> list[tuple]:
         dags += [(f"random{k}", d) for k, d in enumerate(random_variants(res, fg, 4, zlib.crc32(name.encode())))]
     out, seen = [], set()
     for label, dag in dags:
+        if max_intermediate_size(dag, fg) > MAX_TABLE:
+            continue
         f = dag_features(dag, fg)
         key = (dag_cost(dag, fg), tuple(f[k] for k in FEATURES))
         if key not in seen:
@@ -166,12 +169,18 @@ def main() -> None:
     def build(p):
         pi, _, _, dag, _, _ = p
         fg = probs[pi][1]
-        return compile_c_program(generate_c(dag, fg), fg.variables(), fg.cards)
+        try:
+            return compile_c_program(generate_c(dag, fg), fg.variables(), fg.cards)
+        except Exception as e:  # noqa: BLE001
+            print("compile failed:", p[1], p[2], type(e).__name__, flush=True)
+            return None
 
     rows = []
     with ThreadPoolExecutor(args.jobs) as tp:
         runs = list(tp.map(build, progs))
     for p, run in zip(progs, runs):  # timed one after another
+        if run is None:
+            continue
         pi, name, label, dag, flops, f = p
         fg = probs[pi][1]
         ns = arena.time_c(run, {fc.id: fc.table for fc in fg.factors}) * 1e9
