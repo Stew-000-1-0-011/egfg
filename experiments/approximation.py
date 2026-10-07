@@ -5,7 +5,8 @@ state-wide GPB1 / GPB2 / IMM (the same search on the stacked model: one joint mo
 state) are run on observations drawn from the model and compared with the exact posterior
 (every mode history; short runs) and over a long run with GPB2.
 
-Usage: uv run python experiments/approximation.py --out results/approximation.csv [--quick]
+Usage: uv run python experiments/approximation.py --out results/approximation.csv [--quick] [--jobs N]
+Compilation (per model, kind and message form) and evaluation (per program) run in parallel.
 """
 
 from __future__ import annotations
@@ -13,15 +14,18 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import os
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import get_context
 from pathlib import Path
 
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from egfg.switching import compile_switching_programs, run_filter  # noqa: E402
+from egfg.switching import compile_switching_filter, message_groups, run_filter  # noqa: E402
 from egfg.switching_ref import (  # noqa: E402
     exact_filter,
     gpb1,
@@ -40,6 +44,7 @@ from egfg.switching_ref import (  # noqa: E402
 )
 
 SEEDS = (11, 12, 13)
+LAMS = (0.0, 1e6)
 T_LONG = 50
 
 
@@ -81,59 +86,82 @@ def errors(model, res, ref):
     return tv, me
 
 
-def run_model(name, model, uniform) -> list[dict]:
+def _sets(model):
+    """(kind, model to compile, observation converter): egfg on the model itself and, for several
+    components, the state-wide methods (the same search on the stacked model)."""
+    sets = [("egfg", model, _same)]
+    if len(model.components()) > 1:
+        sets.append(("state-wide", stacked_model(model), stacked_obs))
+    return sets
+
+
+def _same(obs):
+    return obs
+
+
+def compile_task(args) -> list[tuple]:
+    """One model, one kind, one message form: the programs for every λ (one process)."""
+    quick, mi, kind, fi = args
+    name, model = models(quick)[mi]
+    _, m, _ = next(s for s in _sets(model) if s[0] == kind)
+    uniform = len(model.components()) >= 3 and kind == "egfg"
+    # three or more components: breadth-first saturation hits the node limit early; the staged
+    # search with every rule finds cheaper programs
+    kw = dict(strategy="staged", rules="full") if uniform else {}
+    forms = message_groups(m)
+    if uniform:
+        forms = [forms[0], forms[-1]] if len(forms) > 1 else forms
+    if fi >= len(forms):
+        return []
+    t0 = time.perf_counter()
+    cache: dict = {}
+    out = [(lam, compile_switching_filter(m, lam=lam, groups=forms[fi], cache=cache, **kw)) for lam in LAMS]
+    return [(mi, kind, fi, lam, p, round(time.perf_counter() - t0, 2)) for lam, p in out]
+
+
+def evaluate_task(args) -> dict:
+    """One program: its error against the exact posterior and over a long run (one process)."""
+    quick, mi, kind, p, search = args
+    name, model = models(quick)[mi]
+    _, m, conv = next(s for s in _sets(model) if s[0] == kind)
     st = stack(model)
     nj = len(st.modes)
     T_ex = max(3, min(8, int(math.log(2e5) / math.log(max(nj, 2)))))
     single = len(model.components()) == 1
-    rows = []
-    sets = [("egfg", model, lambda o: o)]
-    if not single:
-        sets.append(("state-wide", stacked_model(model), stacked_obs))
-    for kind, m, conv in sets:
-        t0 = time.perf_counter()
-        # three or more components: breadth-first saturation hits the node limit early; the staged
-        # search with every rule finds cheaper programs
-        kw = dict(strategy="staged", rules="full") if uniform and kind == "egfg" else {}
-        progs = compile_switching_programs(m, uniform=uniform and kind == "egfg", **kw)
-        search = time.perf_counter() - t0
-        for p in progs:
-            row = {"model": name, "kind": kind, "groups": " ".join("+".join(g) for g in p.groups), "lam": p.lam,
-                   "message_rep": p.step.fwd_rep, "flops": p.step.flops, "collapses": p.collapses,
-                   "search_s": round(search, 2), "joint_modes": nj, "T_exact": T_ex}
-            labs, tvs, mes, taus, kls, sat, tv1, long_me = [], [], [], [], [], [], [], []
-            for seed in SEEDS:
-                obs = simulate(model, T_LONG, seed=seed)
-                short = obs[:T_ex]
-                refs = {"imm": imm(st, short), "gpb2": gpb2(st, short), "gpb1": gpb1(st, short)}
-                raw = run_filter(p, conv(short))
-                res = _unstack(model, m, raw) if kind == "state-wide" else raw  # compared on the original names
-                labs.append(label(model, res, refs))
-                ex = exact_filter(st, short)
-                tv, me = errors(model, res, ex)
-                tvs.append(tv)
-                mes.append(me)
-                tau_t = [min(1.0, sum(x.tau for x in r.messages)) for r in raw]
-                taus.append(tau_t[-1])
-                sat.append(next((t for t, v in enumerate(tau_t) if v >= 1.0), len(tau_t)))
-                kls.append(sum(x.klsum for x in raw[-1].messages))
-                if kind == "egfg" and single and len(model.cards) == 1 and all(d == 1 for d in model.dims.values()):
-                    worst = 0.0
-                    for r, e in zip(raw, ex):
-                        modes, approx = message_joint(model, r.messages)
-                        worst = max(worst, tv_1d(e.comps, approx, modes))
-                    tv1.append(worst)
-                long = run_filter(p, conv(obs))
-                if kind == "state-wide":
-                    long = _unstack(model, m, long)
-                long_me.append(errors(model, long, gpb2(st, obs))[1])
-            row.update(matches=max(set(labs), key=labs.count), mode_tv=round(float(np.mean(tvs)), 5),
-                       mean_err_sd=round(float(np.mean(mes)), 5), tv_1d=round(float(np.mean(tv1)), 5) if tv1 else "",
-                       tau_final=round(float(np.mean(taus)), 4), tau_saturates_at=round(float(np.mean(sat)), 1),
-                       klsum_final=round(float(np.mean(kls)), 4), long_mean_err_vs_gpb2=round(float(np.mean(long_me)), 5))
-            rows.append(row)
-            print(row, flush=True)
-    return rows
+    row = {"model": name, "kind": kind, "groups": " ".join("+".join(g) for g in p.groups), "lam": p.lam,
+           "message_rep": p.step.fwd_rep, "flops": p.step.flops, "collapses": p.collapses,
+           "search_s": search, "joint_modes": nj, "T_exact": T_ex}
+    labs, tvs, mes, taus, kls, sat, tv1, long_me = [], [], [], [], [], [], [], []
+    for seed in SEEDS:
+        obs = simulate(model, T_LONG, seed=seed)
+        short = obs[:T_ex]
+        refs = {"imm": imm(st, short), "gpb2": gpb2(st, short), "gpb1": gpb1(st, short)}
+        raw = run_filter(p, conv(short))
+        res = _unstack(model, m, raw) if kind == "state-wide" else raw  # compared on the original names
+        labs.append(label(model, res, refs))
+        ex = exact_filter(st, short)
+        tv, me = errors(model, res, ex)
+        tvs.append(tv)
+        mes.append(me)
+        tau_t = [min(1.0, sum(x.tau for x in r.messages)) for r in raw]
+        taus.append(tau_t[-1])
+        sat.append(next((t for t, v in enumerate(tau_t) if v >= 1.0), len(tau_t)))
+        kls.append(sum(x.klsum for x in raw[-1].messages))
+        if kind == "egfg" and single and len(model.cards) == 1 and all(d == 1 for d in model.dims.values()):
+            worst = 0.0
+            for r, e in zip(raw, ex):
+                modes, approx = message_joint(model, r.messages)
+                worst = max(worst, tv_1d(e.comps, approx, modes))
+            tv1.append(worst)
+        long = run_filter(p, conv(obs))
+        if kind == "state-wide":
+            long = _unstack(model, m, long)
+        long_me.append(errors(model, long, gpb2(st, obs))[1])
+    row.update(matches=max(set(labs), key=labs.count), mode_tv=round(float(np.mean(tvs)), 5),
+               mean_err_sd=round(float(np.mean(mes)), 5), tv_1d=round(float(np.mean(tv1)), 5) if tv1 else "",
+               tau_final=round(float(np.mean(taus)), 4), tau_saturates_at=round(float(np.mean(sat)), 1),
+               klsum_final=round(float(np.mean(kls)), 4), long_mean_err_vs_gpb2=round(float(np.mean(long_me)), 5))
+    return row
 
 
 def _unstack(model, stacked, res):
@@ -159,10 +187,25 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="results/approximation.csv")
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--jobs", type=int, default=os.cpu_count())
     args = ap.parse_args()
-    rows = []
-    for name, model in models(args.quick):
-        rows += run_model(name, model, uniform=len(model.components()) >= 3)
+    ms = models(args.quick)
+    tasks = [(args.quick, mi, kind, fi) for mi, (_, model) in enumerate(ms) for kind, m, _ in _sets(model)
+             for fi in range(len(message_groups(m)))]
+    tasks.sort(key=lambda t: -len(ms[t[1]][1].components()))  # the slowest first
+    with ProcessPoolExecutor(args.jobs, mp_context=get_context("spawn")) as pool:
+        compiled = [r for rs in pool.map(compile_task, tasks) for r in rs]
+        # the same program for several λ (or forms) is evaluated once
+        seen, todo = set(), []
+        for mi, kind, fi, lam, p, secs in sorted(compiled, key=lambda r: (r[0], r[1] != "egfg", r[2], r[3])):
+            key = (mi, kind, tuple(p.groups), p.step.fwd_rep, tuple(sorted(p.step.counts.items())), p.step.flops)
+            if key not in seen:
+                seen.add(key)
+                todo.append((args.quick, mi, kind, p, secs))
+        rows = []
+        for row in pool.map(evaluate_task, todo):
+            print(row, flush=True)
+            rows.append(row)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     with open(args.out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
