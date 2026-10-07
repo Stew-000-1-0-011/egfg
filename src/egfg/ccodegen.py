@@ -113,6 +113,47 @@ def _split_c(sp, original: FactorGraph) -> tuple[list[str], list[str]]:
     return decls, code
 
 
+def _fusion(dag: Dag, order: list[str], refs: dict[str, int]) -> tuple[dict[str, tuple], set[str]]:
+    """Chains of sums fused into one loop nest: {sum node: operands}, and the nodes they absorb."""
+    fused: dict[str, tuple] = {}
+    skip: set[str] = set()
+    for nid in order:
+        if dag.nodes[nid].op != "sum":
+            continue
+        cur, chain = nid, [nid]
+        while dag.nodes[cur].op == "sum":
+            ch = dag.nodes[cur].children[0]
+            if refs.get(ch, 0) != 1:
+                break
+            cur = ch
+            chain.append(cur)
+        if cur == nid:
+            continue
+        if dag.nodes[cur].op == "mul":
+            # sums down to a product used only here: one loop nest over the product's operands
+            skip.update(chain[1:])
+            fused[nid] = tuple(dag.nodes[cur].children)
+        elif dag.nodes[cur].op == "sum":
+            # stopped above a shared child: fold the whole chain into one reduction of that child
+            skip.update(chain[1:])
+            fused[nid] = (dag.nodes[cur].children[0],)
+        else:
+            # sums down to a leaf: reduce the leaf directly (the leaf itself is read, not skipped)
+            skip.update(chain[1:-1])
+            fused[nid] = (cur,)
+    return fused, skip
+
+
+def _refs(dag: Dag, order: list[str]) -> dict[str, int]:
+    refs: dict[str, int] = {}
+    for nid in order:
+        for c in dag.nodes[nid].children:
+            refs[c] = refs.get(c, 0) + 1
+    for nid in dag.roots.values():
+        refs[nid] = refs.get(nid, 0) + 1
+    return refs
+
+
 def generate_c(dag: Dag, fg: FactorGraph, original: FactorGraph | None = None, structured=None) -> str:
     """C source. `fg` is the graph the Dag refers to (the extended graph for low-rank results),
     `original` the problem's graph, `structured` the low-rank splits used (if any)."""
@@ -120,12 +161,7 @@ def generate_c(dag: Dag, fg: FactorGraph, original: FactorGraph | None = None, s
     cards = fg.cards
     scopes = dag_scopes(dag, fg)
     order = _topo(dag)
-    refs: dict[str, int] = {}
-    for nid in order:
-        for c in dag.nodes[nid].children:
-            refs[c] = refs.get(c, 0) + 1
-    for nid in dag.roots.values():
-        refs[nid] = refs.get(nid, 0) + 1
+    refs = _refs(dag, order)
 
     # how to read each value: (C expression of the base pointer, stride per variable)
     access: dict[str, tuple[str, dict[str, int]]] = {}
@@ -152,32 +188,7 @@ def generate_c(dag: Dag, fg: FactorGraph, original: FactorGraph | None = None, s
         out += [f"{indent}{'    ' * d}}}" for d in reversed(range(len(vars_)))]
         return out
 
-    fused: dict[str, tuple[str, str]] = {}
-    skip: set[str] = set()
-    for nid in order:
-        if dag.nodes[nid].op != "sum":
-            continue
-        cur, chain = nid, [nid]
-        while dag.nodes[cur].op == "sum":
-            ch = dag.nodes[cur].children[0]
-            if refs.get(ch, 0) != 1:
-                break
-            cur = ch
-            chain.append(cur)
-        if cur == nid:
-            continue
-        if dag.nodes[cur].op == "mul":
-            # sums down to a product used only here: one loop nest over the product's operands
-            skip.update(chain[1:])
-            fused[nid] = tuple(dag.nodes[cur].children)
-        elif dag.nodes[cur].op == "sum":
-            # stopped above a shared child: fold the whole chain into one reduction of that child
-            skip.update(chain[1:])
-            fused[nid] = (dag.nodes[cur].children[0],)
-        else:
-            # sums down to a leaf: reduce the leaf directly (the leaf itself is read, not skipped)
-            skip.update(chain[1:-1])
-            fused[nid] = (cur,)
+    fused, skip = _fusion(dag, order, refs)
 
     split_of = {}
     if structured is not None:
@@ -243,10 +254,228 @@ def generate_c(dag: Dag, fg: FactorGraph, original: FactorGraph | None = None, s
     return "\n".join(lines) + "\n"
 
 
-def generate_c_for(fg: FactorGraph, res) -> str:
+def generate_c_compact(dag: Dag, fg: FactorGraph, original: FactorGraph | None = None, structured=None) -> str:
+    """The same computation as `generate_c`, shorter (phase J): every loop nest of the same shape
+    (numbers of states, strides; not names) is one kernel function, the calls are ordered so that
+    the same kernel runs back to back, intermediate arrays are pooled by size, and runs of calls of
+    one kernel become loops (over a fixed step, or over constant tables of array numbers)."""
+    original = original or fg
+    cards = fg.cards
+    scopes = dag_scopes(dag, fg)
+    order = _topo(dag)
+    refs = _refs(dag, order)
+    fused, skip = _fusion(dag, order, refs)
+    split_of = {}
+    if structured is not None:
+        for sp in structured.splits:
+            split_of[sp.u] = sp
+            split_of[sp.v] = sp
+    decls: list[str] = []
+    pre: list[str] = []
+    built: set[int] = set()
+    where: dict[str, tuple] = {}  # node -> ("tables", fid) | ("lr", name) | ("pool", size, index)
+    strides: dict[str, dict[str, int]] = {}
+    ops = []
+    for nid in order:
+        if nid in skip:
+            continue
+        node = dag.nodes[nid]
+        if node.op == "leaf":
+            f = fg.factor(node.arg)
+            strides[nid] = _strides(list(f.scope), cards)
+            if node.arg in split_of:
+                sp = split_of[node.arg]
+                if sp.u not in built:
+                    d, c = _split_c(sp, original)
+                    decls += d
+                    pre += c
+                    built.add(sp.u)
+                where[nid] = ("lr", f"lrU{sp.u}" if node.arg == sp.u else f"lrV{sp.v}")
+            else:
+                where[nid] = ("tables", node.arg)
+            continue
+        if node.op == "input":
+            raise ValueError("input leaves cannot be compiled to C")
+        out_vars = sorted(scopes[nid])
+        strides[nid] = _strides(out_vars, cards)
+        reduce = nid in fused or node.op == "sum"
+        operands = tuple(fused.get(nid, node.children)) if reduce else tuple(node.children)
+        inner = sorted(set().union(*(scopes[c] for c in operands)) - set(out_vars)) if reduce else []
+        ops.append((nid, reduce, out_vars, inner, operands))
+
+    # shapes -> kernels
+    def shape(op):
+        nid, reduce, out_vars, inner, operands = op
+        canon = out_vars + inner
+        return (reduce, tuple(cards[v] for v in out_vars), tuple(cards[v] for v in inner),
+                tuple(tuple(strides[c].get(v, 0) for v in canon) for c in operands))
+
+    kernel: dict[tuple, str] = {}
+    op_shape = {}
+    for op in ops:
+        sh = shape(op)
+        kernel.setdefault(sh, f"k{len(kernel)}")
+        op_shape[op[0]] = sh
+
+    # order the calls: dependencies first, then the same kernel as the previous call
+    pos = {op[0]: i for i, op in enumerate(ops)}
+    is_op = set(pos)
+    waiting = {op[0]: {c for c in op[4] if c in is_op} for op in ops}
+    users: dict[str, list[str]] = {}
+    for op in ops:
+        for c in waiting[op[0]]:
+            users.setdefault(c, []).append(op[0])
+    ready = sorted((n for n, w in waiting.items() if not w), key=pos.get)
+    sched, last = [], None
+    by_id = {op[0]: op for op in ops}
+    while ready:
+        same = [n for n in ready if kernel[op_shape[n]] == last]
+        pick = same[0] if same else ready[0]
+        ready.remove(pick)
+        sched.append(by_id[pick])
+        last = kernel[op_shape[pick]]
+        for u in users.get(pick, []):
+            waiting[u].discard(pick)
+            if not waiting[u]:
+                ready.append(u)
+        ready.sort(key=pos.get)
+
+    # pooled intermediate arrays, numbered in call order
+    pools: dict[int, int] = {}
+    for op in sched:
+        n = 1
+        for v in op[2]:
+            n *= cards[v]
+        where[op[0]] = ("pool", n, pools.get(n, 0))
+        pools[n] = pools.get(n, 0) + 1
+
+    def expr(w, step=None) -> str:
+        if w[0] == "tables":
+            return f"tables[{w[1] if step is None else step}]"
+        if w[0] == "lr":
+            return w[1]
+        return f"p{w[1]}[{w[2] if step is None else step}]"
+
+    def slots(op):
+        return [where[op[0]]] + [where[c] for c in op[4]]
+
+    def affine(seq):
+        """For a run's values of one argument: the loop expression, or None when not regular."""
+        first = seq[0]
+        if any(w[0] != first[0] for w in seq) or (first[0] == "pool" and any(w[1] != first[1] for w in seq)):
+            return None
+        if first[0] == "lr":
+            return expr(first) if all(w == first for w in seq) else None
+        num = [w[-1] for w in seq]
+        d = num[1] - num[0]
+        if any(num[i] != num[0] + i * d for i in range(len(num))):
+            return None
+        return expr(first, f"{num[0]} + {d} * r" if d else f"{num[0]}")
+
+    def kind(w):
+        return w[:2] if w[0] == "pool" else w if w[0] == "lr" else w[:1]
+
+    body: list[str] = []
+    tables_decl: list[str] = []
+    i = 0
+    while i < len(sched):
+        k = kernel[op_shape[sched[i][0]]]
+        kinds = [kind(w) for w in slots(sched[i])]
+        j = i + 1
+        while j < len(sched) and kernel[op_shape[sched[j][0]]] == k and [kind(w) for w in slots(sched[j])] == kinds:
+            j += 1
+        run = sched[i:j]
+        if len(run) >= 2:
+            args = []
+            for a in range(len(kinds)):
+                seq = [slots(op)[a] for op in run]
+                e = affine(seq)
+                if e is None:  # irregular: the numbers go in a constant table
+                    name = f"ix{len(tables_decl)}"
+                    tables_decl.append(f"static const int {name}[{len(seq)}] = {{{', '.join(str(w[-1]) for w in seq)}}};")
+                    e = expr(seq[0], f"{name}[r]")
+                args.append(e)
+            body.append(f"    for (int r = 0; r < {len(run)}; r++) {k}({', '.join(args)});")
+        else:
+            body.append(f"    {k}({', '.join(expr(w) for w in slots(run[0]))});")
+        i = j
+
+    kernels = []
+    for sh, name in kernel.items():
+        reduce, oc, ic, op_strides = sh
+        nv = len(oc) + len(ic)
+        ext = list(oc) + list(ic)
+        params = ", ".join(["double *restrict o"] + [f"const double *restrict a{t}" for t in range(len(op_strides))])
+        out_st, acc = [], 1
+        for c in reversed(oc):
+            out_st.insert(0, acc)
+            acc *= c
+        ix = lambda st: " + ".join(f"v{t}*{x}" if x != 1 else f"v{t}" for t, x in enumerate(st) if x) or "0"  # noqa: E731
+        prod = " * ".join(f"a{t}[{ix(st)}]" for t, st in enumerate(op_strides))
+        oi = ix(out_st + [0] * len(ic))
+        lines = [f"static void {name}({params}) {{"]
+        ind = "    "
+        for t in range(len(oc)):
+            lines.append(f"{ind}for (int v{t} = 0; v{t} < {ext[t]}; v{t}++)")
+            ind += "    "
+        if reduce:
+            lines.append(f"{ind}{{ double acc = 0.0;")
+            inner_ind = ind + "  "
+            for t in range(len(oc), nv):
+                lines.append(f"{inner_ind}for (int v{t} = 0; v{t} < {ext[t]}; v{t}++)")
+                inner_ind += "    "
+            lines.append(f"{inner_ind}acc += {prod};")
+            lines.append(f"{ind}  o[{oi}] = acc; }}")
+        else:
+            lines.append(f"{ind}o[{oi}] = {prod};")
+        lines.append("}")
+        kernels += lines
+    pool_decls = [f"static double p{n}[{cnt}][{n}];" for n, cnt in sorted(pools.items())]
+
+    roots = sorted(dag.roots.items())
+    first = roots[0][1]
+    n0 = 1
+    for v in scopes[first]:
+        n0 *= cards[v]
+    head = ["#include <stddef.h>", "#include <math.h>", ""]
+    if built:
+        head.append(_SOLVE)
+    # outputs: marginals in sorted variable order, sharing the normalizer; runs of marginals of the
+    # same size kept in the same pool are copied by one loop over a table of their numbers
+    outs, off = [], 0
+    for v, nid in roots:
+        outs.append((off, cards[v], where[nid]))
+        off += cards[v]
+    out_lines, i = [], 0
+    while i < len(outs):
+        o0, c, w = outs[i]
+        j = i + 1
+        while j < len(outs) and outs[j][1] == c and w[0] == "pool" and outs[j][2][:2] == w[:2]:
+            j += 1
+        if j - i >= 2:
+            name = f"ix{len(tables_decl)}"
+            tables_decl.append(f"static const int {name}[{j - i}] = {{{', '.join(str(x[2][2]) for x in outs[i:j])}}};")
+            out_lines.append(f"    for (int r = 0; r < {j - i}; r++) for (int j = 0; j < {c}; j++) "
+                             f"out[{o0} + {c} * r + j] = p{w[1]}[{name}[r]][j] * iz;")
+        else:
+            out_lines.append(f"    for (int j = 0; j < {c}; j++) out[{o0} + j] = {expr(w)}[j] * iz;")
+        i = j
+    lines = [*head, *decls, *pool_decls, *tables_decl, "", *kernels, "",
+             "void infer(const double *const *tables, double *out) {", *pre, *body]
+    lines.append(f"    const double *zb = {expr(where[first])};")
+    lines.append(f"    double z = 0.0;")
+    lines.append(f"    for (int j = 0; j < {n0}; j++) z += zb[j];")
+    lines.append("    double iz = 1.0 / z;")
+    lines += out_lines
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def generate_c_for(fg: FactorGraph, res, compact: bool = False) -> str:
+    gen = generate_c_compact if compact else generate_c
     if res.structured is not None:
-        return generate_c(res.extraction.dag, res.eval_fg, fg, res.structured)
-    return generate_c(res.extraction.dag, fg)
+        return gen(res.extraction.dag, res.eval_fg, fg, res.structured)
+    return gen(res.extraction.dag, fg)
 
 
 CFLAGS = ["-O3", "-march=native", "-std=c11", "-ffp-contract=fast", "-shared", "-fPIC"]

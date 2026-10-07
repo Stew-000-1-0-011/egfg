@@ -197,21 +197,45 @@ def _reach_cost(roots, choice: dict[str, ENode], ncost: dict[tuple[str, ENode], 
     return total
 
 
+def node_shape(n: ENode, cid: str, scopes, cards) -> tuple | None:
+    """The shape of a node's loop nest, without variable names: numbers of states, and where each
+    child's variables sit (what one kernel function of the compact C code covers; leaves: None)."""
+    if n.op in ("leaf", "input"):
+        return None
+    out = sorted(scopes[cid])
+    canon = out + sorted(set().union(*(scopes[c] for c in n.children)) - set(out))
+    return (n.op, tuple(cards[v] for v in canon), len(out),
+            tuple(tuple(canon.index(v) for v in sorted(scopes[c])) for c in n.children))
+
+
 def extract_dag_greedy(
-    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0
+    g: EGraphData, fg: FactorGraph, time_limit_s: float = 60, weights: Weights | None = None, overhead: int = 0,
+    shape_penalty: float = 0.0,
 ) -> Extraction:
     """Local search on the shared (DAG) cost, starting from the tree (or seed) choice.
 
     Repeatedly try every other node of every e-class reachable from the roots;
     keep a switch when the result is acyclic and cheaper. Stop when a full pass
-    finds no improvement or time runs out.
+    finds no improvement or time runs out. `shape_penalty` (α) adds α × the number of
+    distinct node shapes used, a proxy for the size of the compact C code (phase J).
     """
     start = time.perf_counter()
-    costs = _costs(g, fg, class_scopes(g, fg), weights, overhead)
+    scopes = class_scopes(g, fg)
+    costs = _costs(g, fg, scopes, weights, overhead)
     ncost = _node_costs(g, costs)
     choice = _start_choice(g, costs)
     roots = list(dict.fromkeys(g.roots.values()))
-    current = _reach_cost(roots, choice, ncost)
+    reach = _reach_cost
+    if shape_penalty:
+        shapes = {(cid, n): node_shape(n, cid, scopes, fg.cards) for cid, nodes in g.classes.items() for n in nodes}
+
+        def reach(roots, choice, ncost):
+            c = _reach_cost(roots, choice, ncost)
+            if c is None:
+                return None
+            used = {shapes[(cid, choice[cid])] for cid in _reachable_under(roots, choice)} - {None}
+            return c + shape_penalty * len(used)
+    current = reach(roots, choice, ncost)
     improved = True
     while improved and time.perf_counter() - start < time_limit_s:
         improved = False
@@ -225,7 +249,7 @@ def extract_dag_greedy(
                 if n == keep or not all(c in choice for c in n.children):
                     continue
                 choice[cid] = n
-                c = _reach_cost(roots, choice, ncost)
+                c = reach(roots, choice, ncost)
                 if c is not None and c < current:
                     current, keep, improved = c, n, True
                 choice[cid] = keep

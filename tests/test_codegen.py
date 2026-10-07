@@ -157,3 +157,27 @@ def test_c_low_rank_holdout_chain():
     tables = draw_tables(p, 3)
     out, ref = run(tables), reference_marginals(p, tables)
     assert all(np.allclose(out[v], ref[v], atol=1e-9) for v in ref)
+
+
+@pytest.mark.parametrize("make,kw", [(lambda: cycle(6, 3), {}), (lambda: grid(2, 3, 3), {}), (lambda: star(6, 3), {}),
+                                     (lambda: chain(20, 3), {"cluster_budget": 6}),
+                                     (lambda: low_rank_tables(cycle(6, 6), 2), {"structure": ("lowrank",)})])
+def test_compact_c_matches_plain_c(make, kw):
+    from egfg.ccodegen import compile_c_program, generate_c_for
+
+    fg = make()
+    res = optimize(fg, extractor="greedy", **kw)
+    tables = {f.id: f.table for f in fg.factors}
+    plain = compile_c_program(generate_c_for(fg, res), fg.variables(), fg.cards)(tables)
+    compact = compile_c_program(generate_c_for(fg, res, compact=True), fg.variables(), fg.cards)(tables)
+    assert all(np.allclose(plain[v], compact[v], rtol=1e-12, atol=0) for v in fg.variables())
+
+
+def test_compact_c_rolls_a_chain_into_loops():
+    from egfg.ccodegen import generate_c_for
+
+    lines = []
+    for n in (24, 48):
+        fg = chain(n, 3)
+        lines.append(generate_c_for(fg, optimize(fg, extractor="greedy", cluster_budget=6), compact=True).count("\n"))
+    assert lines[1] < 1.3 * lines[0]  # twice the chain, about the same code

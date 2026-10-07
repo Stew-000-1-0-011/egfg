@@ -54,11 +54,15 @@ class OptimizeResult:
         return sum(e.seconds for e in self.local_extractions)
 
 
-def _extract(g, fg: FactorGraph, extractor: str, time_limit_s: float, weights=None, overhead: int = 0) -> Extraction:
+def _extract(g, fg: FactorGraph, extractor: str, time_limit_s: float, weights=None, overhead: int = 0,
+             shape_penalty: float = 0.0) -> Extraction:
+    if shape_penalty and extractor != "greedy":
+        raise ValueError("shape_penalty needs the greedy extractor")
     if extractor == "ilp":
         return extract_dag_ilp(g, fg, time_limit_s=time_limit_s, weights=weights, overhead=overhead)
     if extractor == "greedy":
-        return extract_dag_greedy(g, fg, time_limit_s=time_limit_s, weights=weights, overhead=overhead)
+        return extract_dag_greedy(g, fg, time_limit_s=time_limit_s, weights=weights, overhead=overhead,
+                                  shape_penalty=shape_penalty)
     if extractor == "tree":
         return extract_tree(g, fg, weights=weights, overhead=overhead)
     raise ValueError(f"unknown extractor {extractor!r}")
@@ -76,6 +80,7 @@ def optimize(
     strategy: str = "seeds+staged",
     structure: tuple[str, ...] = (),
     call_overhead: int = 0,
+    shape_penalty: float = 0.0,
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
 
@@ -83,14 +88,15 @@ def optimize(
     reproduces phase 1. `cluster_budget` splits the junction tree
     into clusters of at most that many variables (larger cliques stay alone);
     `seed` unions the junction tree computation into each query first.
-    `time_limit_s` bounds each ILP / greedy extraction. `call_overhead` adds a fixed cost to
+    `time_limit_s` bounds each ILP / greedy extraction. `shape_penalty` (greedy only) adds α per
+    distinct node shape, for shorter compact C code. `call_overhead` adds a fixed cost to
     every operation in the extraction objective (fewer, larger steps run faster in numpy). `structure=("lowrank",)` adds
     the low-rank factorizations of the tables as equalities (sum-product only: the
     result can give marginals, not modes or moments).
     """
     if structure:
         return _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed,
-                                    time_limit_s, strategy, structure, call_overhead)
+                                    time_limit_s, strategy, structure, call_overhead, shape_penalty)
     jt = junction_tree(fg)
     problems = local_problems(fg, jt, clusters(jt, cluster_budget), seed)
     sats, exs = [], []
@@ -100,7 +106,7 @@ def optimize(
             inputs=p.inputs, seeds=p.seeds,
         )
         sats.append(sat)
-        ex = _extract(sat.graph, fg, extractor, time_limit_s, overhead=call_overhead)
+        ex = _extract(sat.graph, fg, extractor, time_limit_s, overhead=call_overhead, shape_penalty=shape_penalty)
         if best is not None and best.cost < ex.cost:  # restart remembers its best round
             ex = best
         exs.append(ex)
@@ -111,7 +117,7 @@ def optimize(
 
 
 def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed, time_limit_s,
-                         strategy, structure, call_overhead=0) -> OptimizeResult:
+                         strategy, structure, call_overhead=0, shape_penalty=0.0) -> OptimizeResult:
     from .baselines import junction_tree_terms
     from .ir import all_marginal_queries
     from .structure import low_rank
@@ -127,7 +133,7 @@ def _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_bu
     seeds = junction_tree_terms(fg)[0] if seed else None
     sat, best = run_strategy(st.fg, queries, strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
                              seeds=seeds, equalities=st.equalities, seed_fgs=seed_fgs)
-    ex = _extract(sat.graph, st.fg, extractor, time_limit_s, overhead=call_overhead)
+    ex = _extract(sat.graph, st.fg, extractor, time_limit_s, overhead=call_overhead, shape_penalty=shape_penalty)
     if best is not None and best.cost < ex.cost:
         ex = best
     return OptimizeResult([sat], ex, [frozenset(fg.variables())], [ex], st.fg, bool(st.equalities), st)
