@@ -1,0 +1,67 @@
+problem,vars,config,flops,optimize_s,search_s,trees,tree_costs,phases,tries,solves,accepted,clusters
+grid3x3_k3,9,phaseK,1719,5.96,5.96,2,1719 1854,jt=1917 merge=1719 exchange=1719,22,29,merge:1890 merge:1719,4
+grid3x3_k3,9,halving,1719,5.97,5.97,2,1719 1854,jt=1917 merge=1719 exchange=1719,22,29,merge:1890 merge:1719,4
+grid3x3_k3,9,halving_par,1719,4.83,4.83,2,1719 1854,jt=1917 merge=1719 exchange=1719,22,29,merge:1890 merge:1719,4
+grid3x3_k3,9,halving_par_moves,1719,4.8,4.8,2,1719 1854,jt=1917 merge=1719 exchange=1719,20,29,merge:1890 merge:1719,4
+grid3x3_k3,9,first_par_moves,1719,4.67,4.67,1,1719,jt=1917 merge=1719 exchange=1719,14,18,merge:1890 merge:1719,4
+grid3x3_k3,9,budgets,1845,2.53,,,,,,,,
+cycle10_k4,10,phaseK,2288,1.48,1.48,2,2288 2384,jt=2320 merge=2288 exchange=2288,31,33,merge:2304 merge:2288 merge:2384,6
+cycle10_k4,10,halving,2288,1.38,1.38,2,2288 2384,jt=2320 merge=2288 exchange=2288,31,33,merge:2304 merge:2288 merge:2384,6
+cycle10_k4,10,halving_par,2288,1.45,1.45,2,2288 2384,jt=2320 merge=2288 exchange=2288,31,34,merge:2304 merge:2288 merge:2384,6
+cycle10_k4,10,halving_par_moves,2288,1.39,1.39,2,2288 2384,jt=2320 merge=2288 exchange=2288,29,34,merge:2304 merge:2288 merge:2384,6
+cycle10_k4,10,first_par_moves,2288,1.14,1.14,1,2288,jt=2320 merge=2288 exchange=2288,20,17,merge:2304 merge:2288,6
+cycle10_k4,10,budgets,2544,1.12,,,,,,,,
+sparse10_k3,10,phaseK,774,2.35,2.34,3,774 774 774,jt=801 merge=774 exchange=774,52,37,merge:774 merge:774 merge:774,7
+sparse10_k3,10,halving,774,2.45,2.45,3,774 774 774,jt=801 merge=774 exchange=774,58,37,merge:774 merge:774 merge:774,7
+sparse10_k3,10,halving_par,774,1.66,1.66,3,774 774 774,jt=801 merge=774 exchange=774,58,37,merge:774 merge:774 merge:774,7
+sparse10_k3,10,halving_par_moves,774,1.84,1.84,3,774 774 774,jt=801 merge=774 exchange=774,57,37,merge:774 merge:774 merge:774,7
+sparse10_k3,10,first_par_moves,774,1.18,1.18,1,774,jt=801 merge=774 exchange=774,23,20,merge:774,7
+sparse10_k3,10,budgets,900,4.71,,,,,,,,
+grid4x4_k3,16,phaseK,7857,22.21,22.21,1,8010,jt=8442 merge=8010 exchange=7857,100,74,merge:8334 merge:8280 merge:8145 merge:8010 factor_any:7947 factor_any:7893 factor_any:7857,8
+grid4x4_k3,16,halving,7857,25.73,25.72,1,8010,jt=8442 merge=8010 exchange=7857,100,74,merge:8334 merge:8280 merge:8145 merge:8010 factor_any:7947 factor_any:7893 factor_any:7857,8
+grid4x4_k3,16,halving_par,7857,12.7,12.7,1,8010,jt=8442 merge=8010 exchange=7857,100,77,merge:8334 merge:8280 merge:8145 merge:8010 factor_any:7947 factor_any:7893 factor_any:7857,8
+grid4x4_k3,16,halving_par_moves,7911,10.88,10.88,1,8010,jt=8442 merge=8010 exchange=7911,77,58,merge:8334 merge:8280 merge:8145 merge:8010 factor:7947 factor:7911,8
+grid4x4_k3,16,first_par_moves,7911,10.14,10.14,1,8010,jt=8442 merge=8010 exchange=7911,77,58,merge:8334 merge:8280 merge:8145 merge:8010 factor:7947 factor:7911,8
+grid4x4_k3,16,budgets,8262,6.37,,,,,,,,
+grid5x5_k2,25,phaseK,3216,33.78,33.78,4,3236 3236 3492 3756,jt=3268 merge=3236 exchange=3216,237,204,merge:3244 merge:3236 merge:3260 merge:3236 merge:3756 factor_any:3228 merge:3224 factor_any:3216,17
+grid5x5_k2,25,halving,3216,35.04,35.03,4,3236 3236 3492 3756,jt=3268 merge=3236 exchange=3216,254,204,merge:3244 merge:3236 merge:3260 merge:3236 merge:3756 factor_any:3228 merge:3224 factor_any:3216,17
+grid5x5_k2,25,halving_par,3216,20.87,20.87,4,3236 3236 3492 3756,jt=3268 merge=3236 exchange=3216,254,207,merge:3244 merge:3236 merge:3260 merge:3236 merge:3756 factor_any:3228 merge:3224 factor_any:3216,17
+grid5x5_k2,25,halving_par_moves,3216,19.63,19.63,4,3236 3236 3492 3756,jt=3268 merge=3236 exchange=3216,232,199,merge:3244 merge:3236 merge:3260 merge:3236 merge:3756 factor:3228 merge:3224 factor:3216,17
+grid5x5_k2,25,first_par_moves,3216,8.11,8.11,1,3236,jt=3268 merge=3236 exchange=3216,130,66,merge:3244 merge:3236 factor:3228 merge:3224 factor:3216,17
+grid5x5_k2,25,budgets,3380,13.69,,,,,,,,
+grid6x6_k2,36,phaseK,7496,138.84,138.83,4,7680 7584 8048 8784,jt=7720 merge=7584 exchange=7496,648,333,merge:7712 merge:7704 merge:7696 merge:7688 merge:7680 merge:7624 merge:7616 merge:7608 merge:7600 merge:7592 merge:7584 merge:8108 merge:8076 merge:8060 merge:8048 merge:8816 merge:8808 merge:8784 factor_any:7568 factor_any:7560 factor_any:7528 factor_any:7520 factor_any:7504 factor_any:7496,24
+grid6x6_k2,36,halving,7496,82.68,82.67,4,7688 7584 8076 8808,jt=7720 merge=7584 exchange=7496,498,272,merge:7712 merge:7704 merge:7624 merge:7616 merge:8108 merge:8076 merge:8816 merge:8808 merge:7608 merge:7600 merge:7696 merge:7688 merge:7592 merge:7584 factor_any:7568 factor_any:7560 factor_any:7528 factor_any:7520 factor_any:7504 factor_any:7496,24
+grid6x6_k2,36,halving_par,7496,64.53,64.51,4,7688 7584 8076 8808,jt=7720 merge=7584 exchange=7496,498,298,merge:7712 merge:7704 merge:7624 merge:7616 merge:8108 merge:8076 merge:8816 merge:8808 merge:7608 merge:7600 merge:7696 merge:7688 merge:7592 merge:7584 factor_any:7568 factor_any:7560 factor_any:7528 factor_any:7520 factor_any:7504 factor_any:7496,24
+grid6x6_k2,36,halving_par_moves,7504,65.65,65.64,4,7688 7584 8076 8808,jt=7720 merge=7584 exchange=7504,436,291,merge:7712 merge:7704 merge:7624 merge:7616 merge:8108 merge:8076 merge:8816 merge:8808 merge:7608 merge:7600 merge:7696 merge:7688 merge:7592 merge:7584 factor:7568 factor:7560 factor:7528 factor:7520 factor:7504,24
+grid6x6_k2,36,first_par_moves,7560,54.73,54.72,1,7680,jt=7720 merge=7680 exchange=7560,316,114,merge:7712 merge:7704 merge:7696 merge:7688 merge:7680 factor:7672 merge:7664 merge:7608 factor:7576 factor:7568 factor:7560,23
+grid6x6_k2,36,budgets,7936,28.13,,,,,,,,
+cycle16_k16,16,phaseK,243712,4.1,4.1,2,243712 259584,jt=244480 merge=243712 exchange=243712,59,64,merge:244224 merge:243968 merge:243712 merge:259584,11
+cycle16_k16,16,halving,243712,4.69,4.69,2,243712 259584,jt=244480 merge=243712 exchange=243712,59,64,merge:244224 merge:243968 merge:259584 merge:243712,11
+cycle16_k16,16,halving_par,243712,3.45,3.45,2,243712 259584,jt=244480 merge=243712 exchange=243712,59,65,merge:244224 merge:243968 merge:259584 merge:243712,11
+cycle16_k16,16,halving_par_moves,243712,3.0,3.0,2,243712 259584,jt=244480 merge=243712 exchange=243712,56,65,merge:244224 merge:243968 merge:259584 merge:243712,11
+cycle16_k16,16,first_par_moves,243712,2.09,2.09,1,243712,jt=244480 merge=243712 exchange=243712,38,30,merge:244224 merge:243968 merge:243712,11
+cycle16_k16,16,budgets,268544,5.12,,,,,,,,
+sparse20_k3,20,phaseK,2253,27.18,27.17,2,2397 2388,jt=2406 merge=2388 exchange=2253,84,91,merge:2397 merge:2388 move:2280 merge:2253,15
+sparse20_k3,20,halving,2253,24.99,24.99,2,2397 2388,jt=2406 merge=2388 exchange=2253,99,91,merge:2397 merge:2388 move:2280 merge:2253,15
+sparse20_k3,20,halving_par,2253,11.58,11.57,2,2397 2388,jt=2406 merge=2388 exchange=2253,99,92,merge:2397 merge:2388 move:2280 merge:2253,15
+sparse20_k3,20,halving_par_moves,2253,12.74,12.73,2,2397 2388,jt=2406 merge=2388 exchange=2253,97,92,merge:2397 merge:2388 move:2280 merge:2253,15
+sparse20_k3,20,first_par_moves,2397,2.94,2.94,1,2397,jt=2406 merge=2397 exchange=2397,39,41,merge:2397,16
+sparse20_k3,20,budgets,2352,8.74,,,,,,,,
+coupled3_k3_t6,18,phaseK,4860,56.54,56.53,3,4878 4890 5049,jt=4935 merge=4878 exchange=4860,163,147,merge:4890 merge:4878 merge:4935 merge:4890 merge:5151 merge:5124 merge:5097 merge:5052 merge:5049 move:4869 factor_any:4860,13
+coupled3_k3_t6,18,halving,4860,27.79,27.78,3,4878 4890 5124,jt=4935 merge=4878 exchange=4860,153,132,merge:4890 merge:4878 merge:4935 merge:4890 merge:5151 merge:5124 move:4869 factor_any:4860,13
+coupled3_k3_t6,18,halving_par,4860,17.65,17.64,3,4878 4890 5124,jt=4935 merge=4878 exchange=4860,153,139,merge:4890 merge:4878 merge:4935 merge:4890 merge:5151 merge:5124 move:4869 factor_any:4860,13
+coupled3_k3_t6,18,halving_par_moves,4860,16.83,16.82,3,4878 4890 5124,jt=4935 merge=4878 exchange=4860,127,120,merge:4890 merge:4878 merge:4935 merge:4890 merge:5151 merge:5124 move:4869 factor:4860,13
+coupled3_k3_t6,18,first_par_moves,4860,7.69,7.69,1,4878,jt=4935 merge=4878 exchange=4860,93,72,merge:4890 merge:4878 move:4869 factor:4860,13
+coupled3_k3_t6,18,budgets,5196,28.58,,,,,,,,
+factorial3_k3_t6,18,phaseK,5850,70.27,70.27,4,5850 6012 5850 5886,jt=6714 merge=5850 exchange=5850,144,152,merge:6660 merge:6552 merge:6498 merge:6309 merge:6255 merge:6147 merge:6093 merge:5904 merge:5850 merge:6480 merge:6453 merge:6417 merge:6255 merge:6201 merge:6066 merge:6012 merge:6309 merge:6255 merge:6147 merge:6093 merge:5904 merge:5850 merge:6534 merge:6345 merge:6129 merge:6075 merge:5886,6
+factorial3_k3_t6,18,halving,5886,20.41,20.41,4,6552 6453 6093 5886,jt=6714 merge=5886 exchange=5886,75,110,merge:6660 merge:6552 merge:6480 merge:6453 merge:6309 merge:6255 merge:6534 merge:6345 merge:6147 merge:6093 merge:6129 merge:6075 merge:5886,10
+factorial3_k3_t6,18,halving_par,5886,14.86,14.85,4,6552 6453 6093 5886,jt=6714 merge=5886 exchange=5886,75,134,merge:6660 merge:6552 merge:6480 merge:6453 merge:6309 merge:6255 merge:6534 merge:6345 merge:6147 merge:6093 merge:6129 merge:6075 merge:5886,10
+factorial3_k3_t6,18,halving_par_moves,5886,14.71,14.7,4,6552 6453 6093 5886,jt=6714 merge=5886 exchange=5886,70,134,merge:6660 merge:6552 merge:6480 merge:6453 merge:6309 merge:6255 merge:6534 merge:6345 merge:6147 merge:6093 merge:6129 merge:6075 merge:5886,10
+factorial3_k3_t6,18,first_par_moves,5850,22.97,22.97,1,5850,jt=6714 merge=5850 exchange=5850,54,56,merge:6660 merge:6552 merge:6498 merge:6309 merge:6255 merge:6147 merge:6093 merge:5904 merge:5850,6
+factorial3_k3_t6,18,budgets,6201,10.8,,,,,,,,
+chain64_k4,64,phaseK,4248,11.46,11.46,1,4248,jt=4248 merge=4248 exchange=4248,125,125,,63
+chain64_k4,64,halving,4248,10.87,10.87,1,4248,jt=4248 merge=4248 exchange=4248,125,125,,63
+chain64_k4,64,halving_par,4248,4.99,4.98,1,4248,jt=4248 merge=4248 exchange=4248,125,125,,63
+chain64_k4,64,halving_par_moves,4248,5.03,5.03,1,4248,jt=4248 merge=4248 exchange=4248,125,125,,63
+chain64_k4,64,first_par_moves,4248,5.58,5.57,1,4248,jt=4248 merge=4248 exchange=4248,125,125,,63
+chain64_k4,64,budgets,4248,14.56,,,,,,,,

@@ -12,9 +12,9 @@ Search (first improvement, priority order, strictly decreasing cost, so it alway
 1. for the candidate clique trees (several elimination orders), merges from one cluster per
    clique (the junction tree computation); successive halving keeps the better half of the
    trees after every round of a few merges, until one is left;
-2. exchanges: merges, moving a leaf clique of a cluster to its neighbour, moving a factor of a
-   crossing separator to the other side (optionally: any factor to any cluster containing its
-   scope, splitting a cluster along an inner edge);
+2. exchanges: merges, moving a leaf clique of a cluster to its neighbour, moving a factor to
+   another cluster containing its scope (optionally: only factors of a crossing separator, to
+   the other side; splitting a cluster along an inner edge);
 3. boundary (optional): sending a message as pieces, moving the marginal of a variable to
    another cluster containing it.
 
@@ -38,7 +38,9 @@ from .jtree import JunctionTree, junction_tree
 from .model import FactorGraph
 from .search import run_strategy
 
-EXCHANGE = ("merge", "move", "factor")
+# phase L: the separator-only factor moves ("factor") lost up to 0.7% for no time saved, so the
+# default keeps phase K's factor moves and drops only "split" (never accepted)
+EXCHANGE = ("merge", "move", "factor_any")
 PHASE_K_EXCHANGE = ("merge", "move", "factor_any", "split")  # phase K's moves
 BOUNDARY = ("pieces", "owner")
 
