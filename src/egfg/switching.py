@@ -444,6 +444,10 @@ def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam
         return mentioned <= gen
 
     norm = {cid: generated(cid) for cid in scopes}
+    # collapses that only give an answer (a state's marginal over all modes) and not a message:
+    # every program needs them, and they do not change what is passed on, so they are not penalized
+    msg_roots = {cid for q, cid in g.roots.items() if q.startswith("msg")}
+    output_only = {cid for q, cid in g.roots.items() if not q.startswith("msg")} - msg_roots
     impls: dict = {}
     flops: dict = {}
     errs: dict = {}
@@ -487,13 +491,15 @@ def implementations(g, loc: SLocalStep, model: SwitchingModel, fwd_rep: str, lam
                         first = len(facs) - len(model.observation)
                         obs = [i - first for i in loc.obs_ids & leaves[c]]
                         eps = bound(bound.site(dpart[c], x, cpart[c], obs, loc.kind == "head"))
-                    if price is not None:
+                    if cid in output_only:
+                        penalty = 0.0
+                    elif price is not None:
                         penalty = price * eps
                     else:
                         missing = len(loc.obs_ids - leaves[c])
                         penalty = lam * n[c] * (1 + missing)
                     im = add(cid, MOMENT, nd, ((c, MOMENT),), n[c] * (D[c] + D[c] ** 2), "collapse", penalty)
-                    if im is not None and eps is not None:
+                    if im is not None and eps is not None and cid not in output_only:
                         errs[im] = eps
             else:
                 ca, cb = nd.children
@@ -536,7 +542,7 @@ class STemplate:
     fwd_rep: str
     flops: int
     counts: dict = field(default_factory=dict)
-    eps: float | None = None  # with an ExpectedBound: the sum of the expected KL bounds of its collapses
+    eps: float | None = None  # with an ExpectedBound: the summed expected KL bounds of its collapses (messages only)
 
 
 @dataclass
@@ -727,6 +733,13 @@ def evaluate_template(tmpl: STemplate, model: SwitchingModel, ys, inputs, kls: l
     cards, dims = model.local_cards(), model.local_dims()
     vals: dict = {}
     ch = tmpl.choice.choice
+    # the states the messages depend on: only their collapses are recorded in `kls`
+    on_msg, stack = set(), [s for q, s in tmpl.choice.roots.items() if q.startswith("msg")]
+    while stack:
+        cur = stack.pop()
+        if cur not in on_msg:
+            on_msg.add(cur)
+            stack.extend(ch[cur].kids)
     for s in tmpl.choice.roots.values():
         stack = [s]
         while stack:
@@ -739,7 +752,7 @@ def evaluate_template(tmpl: STemplate, model: SwitchingModel, ys, inputs, kls: l
                 stack.extend(todo)
                 continue
             vals[cur] = _apply(ch[cur], [vals[k] for k in ch[cur].kids], facs, y_of, cards, dims, inputs, step)
-            if kls is not None and ch[cur].op == "collapse":
+            if kls is not None and ch[cur].op == "collapse" and cur in on_msg:
                 kls.append(vals[cur].kl)
             stack.pop()
     return {q: vals[s] for q, s in tmpl.choice.roots.items()}
@@ -752,7 +765,7 @@ class SResult:
     cov: dict[str, np.ndarray]
     tau: dict[str, float]  # per output, the TV bound
     messages: list[CG]  # the messages passed on (names @0)
-    collapse_kl: list[float]  # this step's collapses: each one's bound on the KL it adds
+    collapse_kl: list[float]  # this step's collapses on the way to a message: each one's bound on the KL it adds
 
 
 class SwitchingFilter:
