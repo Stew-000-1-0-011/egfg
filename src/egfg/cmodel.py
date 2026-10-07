@@ -5,7 +5,10 @@ The Dag is split into the loop nests the code generator writes (same rules: `_fu
 product of its operands), a product (one nest writing the product of two operands), and the
 output (normalizing the marginals). Per program the features are
 
-    flops_k   Σ iterations × operands read in the innermost body
+    red       Σ iterations of the summing nests (each adds to one accumulator: a dependency chain,
+              which gcc does not vectorize without -ffast-math)
+    red_mul   Σ iterations × (operands − 1) of the summing nests (the multiplies before the add)
+    mul       Σ iterations of the product nests (independent elements: vectorized)
     writes    Σ elements written (size of each nest's output)
     strided   Σ iterations × operands read with a stride other than 0 or 1 in the innermost loop
     nests     number of nests
@@ -30,7 +33,7 @@ from .ccodegen import _fusion, _refs, _strides, _topo
 from .ir import Dag, ENode, dag_scopes
 from .model import FactorGraph
 
-FEATURES = ("flops_k", "writes", "strided", "nests", "loops", "spill", "const")
+FEATURES = ("red", "red_mul", "mul", "writes", "strided", "nests", "loops", "spill", "const")
 CACHE_ELEMENTS = 256 * 1024 // 8
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "results" / "cost_calibration.json"
 
@@ -69,7 +72,11 @@ def features(nodes: dict[str, ENode], roots: dict[str, str], scopes: dict[str, f
         inner = sorted(set().union(*(scopes[c] for c in operands)) - set(out)) if node.op == "sum" or nid in fused else []
         loops = out + inner
         n = _size(loops, cards)
-        f["flops_k"] += n * len(operands)
+        if node.op == "sum":
+            f["red"] += n
+            f["red_mul"] += n * (len(operands) - 1)
+        else:
+            f["mul"] += n
         w = _size(out, cards)
         f["writes"] += w
         inter += w
@@ -82,7 +89,8 @@ def features(nodes: dict[str, ENode], roots: dict[str, str], scopes: dict[str, f
     # a cluster, are tables already counted above)
     marg = sorted((v, nid) for v, nid in roots.items() if v in cards)
     if marg:
-        f["flops_k"] += _size(scopes[marg[0][1]], cards) + sum(cards[v] for v, _ in marg)
+        f["red"] += _size(scopes[marg[0][1]], cards)
+        f["mul"] += sum(cards[v] for v, _ in marg)
         f["writes"] += sum(cards[v] for v, _ in marg)
         f["nests"] += 1 + len(marg)
     f["spill"] = max(0, inter - CACHE_ELEMENTS)
@@ -110,9 +118,11 @@ class CostModel:
         cards = fg.cards
         out = sorted(own)
         loops = out + (sorted(children[0] - own) if n.op == "sum" else [])
-        k = len(n.children)
         f = dict.fromkeys(FEATURES, 0.0)
-        f["flops_k"] = _size(loops, cards) * k
+        if n.op == "sum":
+            f["red"] = _size(loops, cards)
+        else:
+            f["mul"] = _size(loops, cards)
         f["writes"] = _size(out, cards)
         f["nests"] = 1
         f["loops"] = sum(_size(loops[:d], cards) for d in range(len(loops)))

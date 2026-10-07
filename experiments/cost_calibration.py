@@ -155,7 +155,20 @@ def main() -> None:
     ap.add_argument("--time", type=float, default=120, help="time limit of one partition search (s)")
     ap.add_argument("--out", default="results/cost_model.csv")
     ap.add_argument("--calibration", default="results/cost_calibration.json")
+    ap.add_argument("--programs", default=None, help="pickle of the timed programs: written, or read with --refit")
+    ap.add_argument("--refit", action="store_true", help="recompute the features and refit from --programs")
     args = ap.parse_args()
+    if args.refit:
+        import pickle
+
+        probs = problems()
+        timed = pickle.loads(Path(args.programs).read_bytes())
+        rows = []
+        for pi, name, label, dag, flops, ns in timed:
+            fg = probs[pi][1]
+            rows.append({"problem": name, "label": label, "vars": len(fg.variables()), "flops": flops,
+                         **dag_features(dag, fg), "run_ns": ns, "fold": zlib.crc32(name.encode()) % FOLDS})
+        return finish(rows, len(probs), args)
     if os.environ.get("EGFG_CACHE"):
         raise SystemExit("unset EGFG_CACHE: times are measured")
     probs = problems()
@@ -175,7 +188,7 @@ def main() -> None:
             print("compile failed:", p[1], p[2], type(e).__name__, flush=True)
             return None
 
-    rows = []
+    rows, timed = [], []
     with ThreadPoolExecutor(args.jobs) as tp:
         runs = list(tp.map(build, progs))
     for p, run in zip(progs, runs):  # timed one after another
@@ -186,8 +199,16 @@ def main() -> None:
         ns = arena.time_c(run, {fc.id: fc.table for fc in fg.factors}) * 1e9
         rows.append({"problem": name, "label": label, "vars": len(fg.variables()), "flops": flops, **f,
                      "run_ns": round(ns, 2), "fold": zlib.crc32(name.encode()) % FOLDS})
+        timed.append((pi, name, label, dag, flops, round(ns, 2)))
     print(f"{len(rows)} programs from {len(probs)} problems", flush=True)
+    if args.programs:
+        import pickle
 
+        Path(args.programs).write_bytes(pickle.dumps(timed))
+    finish(rows, len(probs), args)
+
+
+def finish(rows, nprobs, args) -> None:
     for fold in range(FOLDS):  # held-out predictions
         model = fit([r for r in rows if r["fold"] != fold])
         for r in rows:
@@ -197,7 +218,7 @@ def main() -> None:
     for r in rows:
         r["fit_ns"] = round(model.predict(r), 2)
     rel = np.array([abs(r["cv_ns"] - r["run_ns"]) / r["run_ns"] for r in rows])
-    summary = {"programs": len(rows), "problems": len(probs), "cv_median_rel_err": float(np.median(rel)),
+    summary = {"programs": len(rows), "problems": nprobs, "cv_median_rel_err": float(np.median(rel)),
                "cv_p90_rel_err": float(np.quantile(rel, 0.9)),
                "pairs_cv_model": pair_stats(rows, "cv_ns"), "pairs_flops": pair_stats(rows, "flops")}
     print(json.dumps(summary), flush=True)
