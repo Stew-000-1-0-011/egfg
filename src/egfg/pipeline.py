@@ -87,6 +87,9 @@ def optimize(
     max_cluster_vars: int = 12,
     exchange: bool = True,
     boundary: bool = True,
+    partition_trees: str = "halving",
+    partition_jobs: int = 1,
+    partition_moves: tuple[str, ...] | None = None,
 ) -> OptimizeResult:
     """Search for a cheap computation of all marginals.
 
@@ -103,14 +106,17 @@ def optimize(
     `partition="search"` chooses the clusters by measured cost instead of `cluster_budget`
     (see partition.py): merges, then `exchange` moves, then `boundary` choices (messages
     sent as pieces, which cluster computes a marginal), within `partition_time_s` and at most
-    `max_cluster_vars` variables per cluster.
+    `max_cluster_vars` variables per cluster. `partition_trees` ("halving", "all", "first")
+    narrows the candidate clique trees, `partition_jobs` solves candidates in parallel and
+    `partition_moves` sets the exchange moves (partition.EXCHANGE by default).
     """
     if structure:
         return _optimize_structured(fg, extractor, max_iters, node_limit, rules, cluster_budget, seed,
                                     time_limit_s, strategy, structure, call_overhead, shape_penalty)
     if partition == "search":
         return _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
-                                  shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary)
+                                  shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary,
+                                  partition_trees, partition_jobs, partition_moves)
     if partition != "budget":
         raise ValueError(f"unknown partition {partition!r}")
     jt = junction_tree(fg)
@@ -133,14 +139,16 @@ def optimize(
 
 
 def _optimize_searched(fg, extractor, max_iters, node_limit, rules, time_limit_s, strategy, call_overhead,
-                       shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary) -> OptimizeResult:
-    from .partition import search_partition
+                       shape_penalty, partition_time_s, max_cluster_vars, exchange, boundary, trees, jobs,
+                       moves) -> OptimizeResult:
+    from .partition import EXCHANGE, search_partition
 
     solve_kw = dict(strategy=strategy, max_iters=max_iters, node_limit=node_limit, rules=rules,
                     time_limit_s=time_limit_s)
-    extract = lambda g: _extract(g, fg, extractor, time_limit_s, overhead=call_overhead,  # noqa: E731
-                                 shape_penalty=shape_penalty)
-    dag, cur, info = search_partition(fg, solve_kw, extract, partition_time_s, max_cluster_vars, boundary, exchange)
+    extract_kw = dict(extractor=extractor, time_limit_s=time_limit_s, overhead=call_overhead,
+                      shape_penalty=shape_penalty)
+    dag, cur, info = search_partition(fg, solve_kw, extract_kw, partition_time_s, max_cluster_vars, boundary,
+                                      exchange, trees=trees, jobs=jobs, moves=moves or EXCHANGE)
     exs = [s.extraction for s in cur.solved]
     sats = [SaturationResult(None, 0, s.hit_limit, s.seconds, s.nodes) for s in cur.solved]
     ex = Extraction(dag, dag_cost(dag, fg), None, sum(e.seconds for e in exs))

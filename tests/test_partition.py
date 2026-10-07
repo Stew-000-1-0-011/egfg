@@ -10,7 +10,7 @@ from egfg.evaluate import SUM_PRODUCT, evaluate
 from egfg.generators import cycle, grid, random_tree
 from egfg.jtree import JunctionTree
 from egfg.model import Factor, FactorGraph
-from egfg.pipeline import _extract, marginals, optimize
+from egfg.pipeline import marginals, optimize
 from egfg.partition import PartitionInfo, PartitionSearch, initial_state
 
 
@@ -44,7 +44,7 @@ def test_a_factorizing_message_is_sent_as_pieces():
     cliques = [frozenset("ax"), frozenset("ab"), frozenset("by"), frozenset("abcd")]
     jt = JunctionTree(cliques, {0: [1], 1: [0, 2, 3], 2: [1], 3: [1]}, {0: [0], 1: [], 2: [1], 3: [2, 3]})
     ps = PartitionSearch(fg, dict(strategy="staged", max_iters=30, node_limit=50_000, rules="full", time_limit_s=20),
-                         lambda g: _extract(g, fg, "greedy", 20))
+                         dict(extractor="greedy", time_limit_s=20))
     st = initial_state(fg, jt).with_parts([{0, 1, 2}, {3}])
     joint = ps.evaluate(jt, st)
     info = PartitionInfo(1, [], {})
@@ -54,3 +54,11 @@ def test_a_factorizing_message_is_sent_as_pieces():
     ref = brute_force_marginals(fg)
     for v in fg.variables():
         np.testing.assert_allclose(tables[v].data / tables[v].data.sum(), ref[v], atol=1e-12)
+
+
+def test_parallel_search_accepts_the_same_moves():
+    fg = grid(3, 3, 2)
+    kw = dict(extractor="greedy", partition="search", partition_time_s=120)
+    one, two = optimize(fg, **kw), optimize(fg, partition_jobs=2, **kw)
+    assert one.partition.accepted and one.partition.accepted == two.partition.accepted
+    assert one.extraction.cost == two.extraction.cost

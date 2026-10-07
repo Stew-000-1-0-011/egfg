@@ -1,7 +1,7 @@
 # egfg 設計仕様（フェーズ L）：分割の探索を速くする
 
 - 日付：2026-10-07
-- 状態：草案（承認待ち）
+- 状態：承認済み（2026-10-07）
 - 前提：フェーズ K（`2026-10-07-partition-search-design.md`、`experiments/PARTITION_SEARCH_REPORT.md`）
 
 ## 1. 目的
