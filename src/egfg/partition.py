@@ -25,8 +25,11 @@ the candidates are then taken in the same order, so the accepted moves are the s
 from __future__ import annotations
 
 import math
+import multiprocessing
 import time
+import warnings
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field, replace
 from multiprocessing import get_context
 
@@ -164,11 +167,25 @@ class PartitionSearch:
         if self.jobs < 2 or len(todo) < 2:
             return
         if self.pool is None:
+            if getattr(multiprocessing.current_process(), "_inheriting", False):
+                # we are a spawned process re-running a main module without `if __name__ == "__main__":`;
+                # stop at once (the parent falls back to solving one problem at a time)
+                raise RuntimeError("egfg's parallel search started while a worker was being set up")
             self.pool = ProcessPoolExecutor(self.jobs, mp_context=get_context("spawn"), initializer=_init_worker,
                                             initargs=(self.fg, self.solve_kw, self.extract_kw))
-        for k, solved in zip(todo, self.pool.map(_solve_in_worker, todo.values())):
+        try:
+            solved = list(self.pool.map(_solve_in_worker, todo.values()))
+        except (BrokenProcessPool, OSError) as e:
+            warnings.warn("egfg: the parallel partition search could not start its processes "
+                          f"({type(e).__name__}); solving one at a time. A script that calls optimize() at "
+                          "its top level needs `if __name__ == \"__main__\":` (or partition_jobs=1).",
+                          RuntimeWarning, stacklevel=2)
+            self.pool.shutdown(cancel_futures=True)
+            self.pool, self.jobs = None, 1
+            return
+        for k, sv in zip(todo, solved):
             self.solves += 1
-            self.memo[k] = solved
+            self.memo[k] = sv
 
     def evaluate(self, jt: JunctionTree, state: State) -> Evaluated:
         self.tries += 1
